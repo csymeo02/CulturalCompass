@@ -39,4 +39,8 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+    implementation(libs.activity)
+    implementation(libs.google.location)
+    implementation(libs.google.maps)
+    implementation(libs.android.maps.utils)
 }

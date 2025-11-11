@@ -6,6 +6,11 @@ espressoCore = "3.6.1"
 appcompat = "1.7.0"
 material = "1.12.0"
 constraintlayout = "2.1.4"
+activity = "1.7.0"
+googleMapsPlugin = "2.0.1"
+googlePlayLocation = "21.3.0"
+googlePlayMaps = "19.0.0"
+mapsUtils="3.8.2"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -14,7 +19,13 @@ espresso-core = { group = "androidx.test.espresso", name = "espresso-core", vers
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
+google-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "googlePlayLocation" }
+google-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "googlePlayMaps" }
+android-maps-utils = { group = "com.google.maps.android", name = "android-maps-utils", version.ref = "mapsUtils" }
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+google-maps = { id = "com.google.android.libraries.mapsplatform.secrets-gradle-plugin", version.ref="googleMapsPlugin" }
 

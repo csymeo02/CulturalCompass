@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="16dp"
+    android:gravity="center_vertical"
+    android:elevation="4dp"
+    android:background="@drawable/header_background">
+
+
+    <!-- Greeting Text -->
+    <TextView
+        android:id="@+id/textGreeting"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Hello, John"
+        android:textColor="#1E293B"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+
+    <!-- Notification Icon -->
+    <ImageView
+        android:id="@+id/iconNotification"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/icon_background"
+        android:padding="10dp"
+        android:src="@drawable/ic_notifications"
+        android:contentDescription="Notifications" />
+
+    <!-- Settings Icon -->
+    <ImageView
+        android:id="@+id/iconSettings"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/icon_background"
+        android:padding="10dp"
+        android:src="@drawable/ic_settings"
+        android:contentDescription="Settings" />
+
+</LinearLayout>
