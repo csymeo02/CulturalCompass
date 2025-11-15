@@ -11,6 +11,7 @@ googleMapsPlugin = "2.0.1"
 googlePlayLocation = "21.3.0"
 googlePlayMaps = "19.0.0"
 mapsUtils="3.8.2"
+cardView="1.0.0"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -23,6 +24,7 @@ activity = { group = "androidx.activity", name = "activity", version.ref = "acti
 google-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "googlePlayLocation" }
 google-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "googlePlayMaps" }
 android-maps-utils = { group = "com.google.maps.android", name = "android-maps-utils", version.ref = "mapsUtils" }
+androidx-cardview={group="androidx.cardview", name="cardview",version.ref="cardView"}
 
 
 [plugins]

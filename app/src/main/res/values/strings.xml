@@ -4,5 +4,7 @@
     <string name="map">Map</string>
     <string name="favorites">Favorites</string>
     <string name="ai_assistant">AI Assistant</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 
 </resources>

@@ -1,24 +1,47 @@
 package com.example.culturalcompass;
 
 import android.os.Bundle;
-
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+import androidx.fragment.app.Fragment;
+import com.example.culturalcompass.ui.map.MapFragment;
+import com.example.culturalcompass.ui.favorites.FavoritesFragment;
+import com.example.culturalcompass.ui.assistant.AIAssistantFragment;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-//        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-//            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-//            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-//            return insets;
-//        });
+
+        BottomNavigationView bottomNavigationView = findViewById(R.id.bottomNavigationView);
+
+        // Load HomeFragment by default
+        if (savedInstanceState == null) {
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.flFragment, new MapFragment())
+                    .commit();
+        }
+
+        // Handle bottom navigation item clicks
+        bottomNavigationView.setOnItemSelectedListener(item -> {
+            Fragment selectedFragment = null;
+
+            if (item.getItemId() == R.id.nav_map) {
+                selectedFragment = new MapFragment();
+            } else if (item.getItemId() == R.id.nav_favorites) {
+                selectedFragment = new FavoritesFragment();
+            } else if (item.getItemId() == R.id.nav_assistant) {
+                selectedFragment = new AIAssistantFragment();
+            }
+
+            if (selectedFragment != null) {
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.flFragment, selectedFragment)
+                        .commit();
+            }
+            return true;
+        });
     }
 }
