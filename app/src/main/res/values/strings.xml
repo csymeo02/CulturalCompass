@@ -5,5 +5,7 @@
     <string name="favorites">Favorites</string>
     <string name="ai_assistant">AI Assistant</string>
     <string name="hello_blank_fragment">Generated to remove error George</string>
+    <string name="google_maps_key">AIzaSyCTpvm5CkW8tpgwsrP9yGHd932X34Ly6bQ</string>
+
 
 </resources>

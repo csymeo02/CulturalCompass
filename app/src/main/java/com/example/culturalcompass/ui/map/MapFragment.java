@@ -21,6 +21,7 @@ import com.example.culturalcompass.model.Attraction;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -28,28 +29,30 @@ import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.location.LocationResult;
 
+// Places SDK (New)
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.CircularBounds;
+import com.google.android.libraries.places.api.model.Place;
+import com.google.android.libraries.places.api.net.PlacesClient;
+import com.google.android.libraries.places.api.net.SearchNearbyRequest;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private MapView mapView;
     private GoogleMap mMap;
     private FusedLocationProviderClient fusedLocationClient;
+    private PlacesClient placesClient;
+
     private double userLat;
     private double userLon;
+
     private RecyclerView recyclerNearby;
     private LocationCallback locationCallback;
     private LocationRequest locationRequest;
@@ -59,7 +62,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private double lastFetchLat = 0;
     private double lastFetchLon = 0;
 
-
     private ActivityResultLauncher<String> requestPermissionLauncher;
 
     public MapFragment() {}
@@ -68,15 +70,27 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // --- 1) Initialize Places SDK (New) once ---
+        if (!Places.isInitialized()) {
+            Places.initializeWithNewPlacesApiEnabled(
+                    requireContext().getApplicationContext(),
+                    getString(R.string.google_maps_key)
+            );
+        }
+        placesClient = Places.createClient(requireContext());
+
+        // --- 2) Location client ---
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
 
+        // Continuous location updates (every 5s, at least 10m movement)
         locationRequest = new LocationRequest.Builder(
                 LocationRequest.PRIORITY_HIGH_ACCURACY,
                 5000 // 5 seconds
-        ).setMinUpdateDistanceMeters(10) // trigger callback when user moves 10 meters
+        )
+                .setMinUpdateDistanceMeters(10)
                 .build();
 
-// Create the continuous location listener
+        // Continuous location listener
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
@@ -89,7 +103,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 userLat = newLat;
                 userLon = newLon;
 
-                // Calculate how far the user moved since last API fetch
+                // Calculate how far the user moved since last Places fetch
                 float[] dist = new float[1];
                 android.location.Location.distanceBetween(
                         lastFetchLat, lastFetchLon,
@@ -102,16 +116,20 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     lastFetchLat = newLat;
                     lastFetchLon = newLon;
 
+                    // Call Nearby Search (New)
                     loadNearbyAttractions(newLat, newLon);
 
                     // Move camera smoothly
-                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
-                            new LatLng(newLat, newLon), 16f
-                    ));
+                    if (mMap != null) {
+                        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
+                                new LatLng(newLat, newLon), 16f
+                        ));
+                    }
                 }
             }
         };
 
+        // Runtime permission request launcher
         requestPermissionLauncher =
                 registerForActivityResult(
                         new ActivityResultContracts.RequestPermission(),
@@ -126,7 +144,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         }
                 );
     }
-
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
@@ -144,7 +161,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         return view;
     }
 
-
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
@@ -153,6 +169,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         // Try enabling location now that map is ready
         enableMyLocation();
+
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
 
@@ -162,7 +179,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     requireActivity().getMainLooper()
             );
         }
-
     }
 
     private void enableMyLocation() {
@@ -172,16 +188,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 == PackageManager.PERMISSION_GRANTED) {
 
             mMap.setMyLocationEnabled(true);  // SHOW BLUE DOT
-            getUserLocation();                // Get coordinates + move camera
+            getUserLocation();                // Get coordinates + first camera move
 
         } else {
             requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
         }
     }
 
-
     private void getUserLocation() {
-
         fusedLocationClient.getLastLocation()
                 .addOnSuccessListener(location -> {
                     if (location != null) {
@@ -189,14 +203,18 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         userLat = location.getLatitude();
                         userLon = location.getLongitude();
 
+                        // for first fetch threshold
                         lastFetchLat = userLat;
                         lastFetchLon = userLon;
 
                         LatLng userPosition = new LatLng(userLat, userLon);
 
+                        // First Nearby Search
                         loadNearbyAttractions(userLat, userLon);
 
-                        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(userPosition, 16f));
+                        if (mMap != null) {
+                            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(userPosition, 16f));
+                        }
 
                     } else {
                         Toast.makeText(requireContext(),
@@ -211,119 +229,136 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 );
     }
 
-
-
+    /**
+     * Uses Places SDK for Android (New) Nearby Search to get nearby cultural places.
+     */
     private void loadNearbyAttractions(double lat, double lon) {
-        String apiKey = "AIzaSyCTpvm5CkW8tpgwsrP9yGHd932X34Ly6bQ";
+
+        // 1) Define which fields we want back for each Place
+        final List<Place.Field> placeFields = Arrays.asList(
+                Place.Field.ID,
+                Place.Field.DISPLAY_NAME,
+                Place.Field.LOCATION,
+                Place.Field.PRIMARY_TYPE,
+                Place.Field.PRIMARY_TYPE_DISPLAY_NAME
+        );
+
+        // 2) Define circular search area (5km radius)
+        LatLng center = new LatLng(lat, lon);
+        CircularBounds circle = CircularBounds.newInstance(center, /* radius = */ 5000);
+
+        // 3) Types to include (cultural / historical)
+        final List<String> includedTypes = Arrays.asList(
+                "tourist_attraction",
+                "museum",
+                "art_gallery",
+                "church",
+                "hindu_temple",
+                "mosque",
+                "synagogue",
+                "park",
+                "library",
+                "cemetery"
+        );
 
 
-        String url =
-                "https://maps.googleapis.com/maps/api/place/nearbysearch/json" +
-                        "?location=" + lat + "," + lon +
-                        "&radius=5000" +
-                        "&keyword=tourist attraction OR museum OR art gallery OR monument OR archaeological site OR historical landmark OR ancient ruins OR cultural site" +
-                        "&key=" + apiKey;
 
-        new Thread(() -> {
-            try {
-                URL apiUrl = new URL(url);
-                HttpURLConnection conn = (HttpURLConnection) apiUrl.openConnection();
-                conn.connect();
+        // 5) Build Nearby Search request
+        SearchNearbyRequest request =
+                SearchNearbyRequest.builder(circle, placeFields)
+                        .setIncludedTypes(includedTypes)
+                        .setMaxResultCount(10)
+                        .setRankPreference(SearchNearbyRequest.RankPreference.DISTANCE)
+                        .build();
 
-                BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(conn.getInputStream())
-                );
+        // 6) Call PlacesClient
+        placesClient.searchNearby(request)
+                .addOnSuccessListener(response -> {
 
-                StringBuilder result = new StringBuilder();
-                String line;
+                    List<Place> places = response.getPlaces();
+                    List<Attraction> attractions = new ArrayList<>();
 
-                while ((line = reader.readLine()) != null) {
-                    result.append(line);
-                }
+                    for (Place place : places) {
+                        LatLng placeLoc = place.getLocation();
+                        if (placeLoc == null) continue;
 
-                reader.close();
-                conn.disconnect();
+                        // distance from user
+                        float[] dist = new float[1];
+                        android.location.Location.distanceBetween(
+                                userLat, userLon,
+                                placeLoc.latitude, placeLoc.longitude,
+                                dist
+                        );
+                        double distanceMeters = dist[0];
 
-                parseAttractionsResponse(result.toString());
+                        String name = place.getDisplayName();
+                        if (name == null || name.isEmpty()) {
+                            name = "Unknown place";
+                        }
 
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+                        // Human readable type label, e.g. "Museum"
+                        String typeLabel = place.getPrimaryTypeDisplayName();
+                        if (typeLabel == null || typeLabel.isEmpty()) {
+                            // fallback to raw primaryType, e.g. "museum"
+                            typeLabel = place.getPrimaryType();
+                        }
 
-        }).start();
-    }
+                        attractions.add(
+                                new Attraction(
+                                        name,
+                                        placeLoc.latitude,
+                                        placeLoc.longitude,
+                                        distanceMeters,
+                                        typeLabel
+                                )
+                        );
+                    }
 
-    private boolean contains(JSONArray arr, String value) {
-        if (arr == null) return false;
-        for (int i = 0; i < arr.length(); i++) {
-            if (arr.optString(i).equalsIgnoreCase(value)) return true;
-        }
-        return false;
-    }
-
-    private void parseAttractionsResponse(String json) {
-
-        List<Attraction> attractions = new ArrayList<>();
-
-        try {
-            JSONObject obj = new JSONObject(json);
-            JSONArray results = obj.getJSONArray("results");
-
-            for (int i = 0; i < results.length(); i++) {
-
-                JSONObject item = results.getJSONObject(i);
-                if (!item.has("geometry")) continue;
-
-                String name = item.optString("name", "Unknown Place");
-
-                JSONObject locationObj =
-                        item.getJSONObject("geometry").getJSONObject("location");
-
-                double lat = locationObj.getDouble("lat");
-                double lng = locationObj.getDouble("lng");
-
-                // ---- Calculate distance from the user ----
-                float[] distanceResult = new float[1];
-                android.location.Location.distanceBetween(
-                        userLat, userLon,
-                        lat, lng,
-                        distanceResult
-                );
-
-                double distanceMeters = distanceResult[0];
-
-                // ---- Save attraction ----
-                attractions.add(new Attraction(name, lat, lng, distanceMeters));
-            }
-
-            // ---- Sort by nearest ----
-            Collections.sort(attractions, Comparator.comparingDouble(Attraction::getDistanceMeters));
-
-            // ---- Keep only top 10 ----
-            List<Attraction> top10 = attractions.subList(0, Math.min(10, attractions.size()));
-
-            // ---- Update UI ----
-            requireActivity().runOnUiThread(() -> {
-                mMap.clear();
-                recyclerNearby.setAdapter(new NearbyAdapter(top10));
-
-                for (Attraction a : top10) {
-                    mMap.addMarker(new MarkerOptions()
-                            .position(new LatLng(a.getLat(), a.getLng()))
-                            .title(a.getName())
+                    // Sort by distance just in case
+                    Collections.sort(
+                            attractions,
+                            Comparator.comparingDouble(Attraction::getDistanceMeters)
                     );
-                }
-            });
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+                    // Keep only top 10
+                    List<Attraction> top10 =
+                            attractions.subList(0, Math.min(10, attractions.size()));
+
+                    // Update UI: clear markers, set adapter, add markers
+                    if (getActivity() == null) return;
+
+                    getActivity().runOnUiThread(() -> {
+                        if (mMap != null) {
+                            mMap.clear();
+                        }
+
+                        recyclerNearby.setAdapter(new NearbyAdapter(top10));
+
+                        if (mMap != null) {
+                            for (Attraction a : top10) {
+                                mMap.addMarker(
+                                        new MarkerOptions()
+                                                .position(new LatLng(a.getLat(), a.getLng()))
+                                                .title(a.getName())
+                                );
+                            }
+                        }
+                    });
+
+                })
+                .addOnFailureListener(e -> {
+                    e.printStackTrace();
+                    if (getContext() != null) {
+                        Toast.makeText(
+                                getContext(),
+                                "Error loading nearby places: " + e.getMessage(),
+                                Toast.LENGTH_SHORT
+                        ).show();
+                    }
+                });
     }
 
-
-
-
-    // Lifecycle
+    // --- Lifecycle ---
     @Override
     public void onResume() {
         super.onResume();
@@ -339,12 +374,23 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             );
         }
     }
+
     @Override
     public void onPause() {
         super.onPause();
         mapView.onPause();
         fusedLocationClient.removeLocationUpdates(locationCallback);
     }
-    @Override public void onDestroy() { super.onDestroy(); mapView.onDestroy(); }
-    @Override public void onLowMemory() { super.onLowMemory(); mapView.onLowMemory(); }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mapView.onDestroy();
+    }
+
+    @Override
+    public void onLowMemory() {
+        super.onLowMemory();
+        mapView.onLowMemory();
+    }
 }
