@@ -1,14 +1,94 @@
-<?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.assistant.AIAssistantFragment">
+    android:orientation="vertical"
+    android:background="#FAFAFA"
+    android:padding="16dp">
 
-    <!-- TODO: Update blank fragment layout -->
+    <!-- User Question -->
     <TextView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="@string/hello_blank_fragment" />
+        android:id="@+id/user_question"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bubble_user"
+        android:text="Why was the Acropolis built?"
+        android:textColor="#FFFFFF"
+        android:padding="12dp"
+        android:textSize="15sp"
+        android:layout_gravity="end"
+        android:layout_marginBottom="20dp" />
 
-</FrameLayout>
+    <!-- Assistant Response Container -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="start"
+        android:layout_marginBottom="28dp">
+
+        <!-- Assistant Icon -->
+        <ImageView
+            android:id="@+id/assistant_icon"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_robot"
+            android:layout_gravity="center_vertical"
+            android:layout_marginEnd="12dp" />
+
+        <!-- Assistant Response Card -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/card_assistant"
+            android:padding="12dp"
+            android:layout_gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/assistant_response"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="The Acropolis was built in the 5th century BC ..."
+                android:textColor="#222222"
+                android:textSize="15sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Spacer/Stretch -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- Input Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+
+        <EditText
+            android:id="@+id/input_message"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:background="@drawable/rounded_input_text"
+            android:hint="Ask me anything..."
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:textSize="15sp"
+            android:textColor="#222222"
+            android:inputType="text" />
+
+        <ImageButton
+            android:id="@+id/send_button"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@null"
+            android:src="@drawable/ic_send"
+            android:contentDescription="Send"
+            app:tint="#2196F3" />
+    </LinearLayout>
+</LinearLayout>
