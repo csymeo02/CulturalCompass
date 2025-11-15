@@ -5,18 +5,25 @@ public class Attraction {
     private double lat;
     private double lng;
     private double distanceMeters;
-    private String type; // e.g. "Museum", "Historical landmark"
+    private String type;
+    private Double rating;        // nullable
+    private Integer ratingCount;  // nullable
+    private boolean favorite;
 
     public Attraction(String name,
                       double lat,
                       double lng,
                       double distanceMeters,
-                      String type) {
+                      String type,
+                      Double rating,
+                      Integer ratingCount) {
         this.name = name;
         this.lat = lat;
         this.lng = lng;
         this.distanceMeters = distanceMeters;
         this.type = type;
+        this.rating = rating;
+        this.ratingCount = ratingCount;
     }
 
     public String getName() { return name; }
@@ -24,4 +31,10 @@ public class Attraction {
     public double getLng() { return lng; }
     public double getDistanceMeters() { return distanceMeters; }
     public String getType() { return type; }
+    public Double getRating() { return rating; }
+    public Integer getRatingCount() { return ratingCount; }
+
+    public boolean isFavorite() { return favorite; }
+    public void setFavorite(boolean favorite) { this.favorite = favorite; }
 }
+

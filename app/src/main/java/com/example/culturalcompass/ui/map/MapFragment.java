@@ -240,7 +240,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 Place.Field.DISPLAY_NAME,
                 Place.Field.LOCATION,
                 Place.Field.PRIMARY_TYPE,
-                Place.Field.PRIMARY_TYPE_DISPLAY_NAME
+                Place.Field.PRIMARY_TYPE_DISPLAY_NAME,
+                Place.Field.RATING,
+                Place.Field.USER_RATING_COUNT
         );
 
         // 2) Define circular search area (5km radius)
@@ -303,15 +305,22 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                             typeLabel = place.getPrimaryType();
                         }
 
+
+                        Double rating = place.getRating();              // can be null
+                        Integer ratingCount = place.getUserRatingCount(); // can be null
+
                         attractions.add(
                                 new Attraction(
                                         name,
                                         placeLoc.latitude,
                                         placeLoc.longitude,
                                         distanceMeters,
-                                        typeLabel
+                                        typeLabel,
+                                        rating,
+                                        ratingCount
                                 )
                         );
+
                     }
 
                     // Sort by distance just in case

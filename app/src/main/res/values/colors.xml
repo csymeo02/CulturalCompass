@@ -7,5 +7,7 @@
     <color name="background">#F2F2F2</color>
     <color name="white">#FFFFFF</color>
     <color name="text">#0F1B1C</color>
+    <color name="gold">#FFC107</color>
+
 
 </resources>

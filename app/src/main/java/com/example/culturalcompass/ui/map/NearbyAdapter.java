@@ -3,6 +3,9 @@ package com.example.culturalcompass.ui.map;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.RatingBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -12,6 +15,7 @@ import com.example.culturalcompass.R;
 import com.example.culturalcompass.model.Attraction;
 
 import java.util.List;
+import java.util.Locale;
 
 public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder> {
 
@@ -21,31 +25,106 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
         this.items = items;
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView txtName, txtDistance;
+    @NonNull
+    @Override
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_nearby, parent, false);
+        return new ViewHolder(view);
+    }
 
-        public ViewHolder(View v) {
-            super(v);
-            txtName = v.findViewById(R.id.txtName);
-            txtDistance = v.findViewById(R.id.txtDistance);
+    @Override
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        Attraction a = items.get(position);
+
+        // --- Name & type ---
+        holder.txtName.setText(a.getName());
+        holder.txtType.setText(a.getType());
+
+        // --- Distance formatting ---
+        double meters = a.getDistanceMeters();
+        String distanceText;
+        if (meters < 1000) {
+            distanceText = String.format(Locale.getDefault(), "%.0f m away", meters);
+        } else {
+            distanceText = String.format(Locale.getDefault(), "%.1f km away", meters / 1000.0);
+        }
+        holder.txtDistance.setText(distanceText);
+
+        // --- Rating chip (4,4 ★★★★☆ (88)) ---
+        Double rating = a.getRating();
+        Integer ratingCount = a.getRatingCount();
+
+        if (rating != null && ratingCount != null && ratingCount > 0) {
+            // 4,4 or 4.4 depending on locale
+            String ratingStr = String.format(Locale.getDefault(), "%.1f", rating);
+            holder.txtRatingValue.setText(ratingStr);
+
+            holder.ratingBar.setRating(rating.floatValue());
+
+            String countStr = "(" + ratingCount + ")";
+            holder.txtRatingCount.setText(countStr);
+
+            holder.layoutRating.setVisibility(View.VISIBLE);
+        } else {
+            // hide the whole chip if no rating
+            holder.layoutRating.setVisibility(View.GONE);
+        }
+
+        // --- TODO: landmark photo (for now keep placeholder) ---
+        // holder.imgPhoto.setImageResource(R.drawable.some_placeholder);
+
+        // --- Heart toggle ---
+        updateHeartIcon(holder, a.isFavorite());
+        holder.imgFavorite.setOnClickListener(v -> {
+            boolean newFav = !a.isFavorite();
+            a.setFavorite(newFav);
+            updateHeartIcon(holder, newFav);
+        });
+    }
+
+
+    private void updateHeartIcon(ViewHolder holder, boolean favorite) {
+        if (favorite) {
+            holder.imgFavorite.setImageResource(R.drawable.ic_heart_filled);
+        } else {
+            holder.imgFavorite.setImageResource(R.drawable.ic_heart_outline);
         }
     }
 
-    @NonNull
     @Override
-    public NearbyAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View v = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_nearby, parent, false);
-        return new ViewHolder(v);
+    public int getItemCount() {
+        return items.size();
     }
 
-    @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int pos) {
-        Attraction a = items.get(pos);
-        holder.txtName.setText(a.getName());
-        holder.txtDistance.setText(String.format("%.2f km away", a.getDistanceMeters() / 1000));
-    }
+    static class ViewHolder extends RecyclerView.ViewHolder {
 
-    @Override
-    public int getItemCount() { return items.size(); }
+        ImageView imgPhoto;
+        TextView txtName;
+        TextView txtRating;
+        TextView txtType;
+        TextView txtDistance;
+        ImageView imgFavorite;
+
+        LinearLayout layoutRating;
+        TextView txtRatingValue;
+        TextView txtRatingCount;
+        RatingBar ratingBar;
+
+        ViewHolder(@NonNull View itemView) {
+            super(itemView);
+            txtName = itemView.findViewById(R.id.txtName);
+            txtType = itemView.findViewById(R.id.txtType);
+            txtDistance = itemView.findViewById(R.id.txtDistance);
+            imgFavorite = itemView.findViewById(R.id.imgFavorite);
+            imgPhoto = itemView.findViewById(R.id.imgPhoto);
+
+            layoutRating = itemView.findViewById(R.id.layoutRating);
+            txtRatingValue = itemView.findViewById(R.id.txtRatingValue);
+            txtRatingCount = itemView.findViewById(R.id.txtRatingCount);
+            ratingBar = itemView.findViewById(R.id.ratingBar);
+        }
+
+    }
 }
+
