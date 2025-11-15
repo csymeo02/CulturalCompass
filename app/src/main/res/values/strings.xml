@@ -4,5 +4,6 @@
     <string name="map">Map</string>
     <string name="favorites">Favorites</string>
     <string name="ai_assistant">AI Assistant</string>
+    <string name="hello_blank_fragment">Generated to remove error George</string>
 
 </resources>

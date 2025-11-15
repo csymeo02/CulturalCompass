@@ -36,6 +36,8 @@ dependencies {
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.constraintlayout)
+    implementation(libs.navigation.fragment)
+    implementation(libs.navigation.ui)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
@@ -43,4 +45,5 @@ dependencies {
     implementation(libs.google.location)
     implementation(libs.google.maps)
     implementation(libs.android.maps.utils)
+    implementation("androidx.core:core-splashscreen:1.0.1")
 }

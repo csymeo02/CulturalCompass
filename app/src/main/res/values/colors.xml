@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+
+    <color name="primary">#2A6F97</color>
     <color name="beige">#EAEAEA</color>
-    <color name="petrol">#2A6F97</color>
+    <color name="background">#F2F2F2</color>
+    <color name="white">#FFFFFF</color>
+    <color name="text">#0F1B1C</color>
+
 </resources>

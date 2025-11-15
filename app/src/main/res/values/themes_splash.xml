@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.CulturalCompass.Splash" parent="Theme.CulturalCompass">
+
+        <!-- Android 12 splash background -->
+        <item name="windowSplashScreenBackground">#EED9B7</item>
+
+        <!-- Android 12 splash icon -->
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+
+        <!-- After finishing system splash, continue with same theme -->
+        <item name="postSplashScreenTheme">@style/Theme.CulturalCompass</item>
+
+    </style>
+
+</resources>
