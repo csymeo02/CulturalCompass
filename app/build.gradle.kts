@@ -45,5 +45,6 @@ dependencies {
     implementation(libs.google.location)
     implementation(libs.google.maps)
     implementation(libs.android.maps.utils)
+    implementation (libs.places)
     implementation("androidx.core:core-splashscreen:1.0.1")
 }
