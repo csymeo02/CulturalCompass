@@ -12,16 +12,20 @@ import android.widget.ProgressBar;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.navigation.fragment.NavHostFragment;
-//import androidx.navigation.fragment.NavHostFragment;
 
+import com.example.culturalcompass.MainActivity;
 import com.example.culturalcompass.R;
+import com.example.culturalcompass.ui.map.MapFragment;
 
 public class SplashFragment extends Fragment {
 
     private ProgressBar progressBar;
-    private volatile boolean initFinished = false;
-    private volatile boolean reached95 = false;
+
+    private boolean animationDone = false;
+    private boolean initDone = false;
+    private boolean navigated = false;
+
+    private ValueAnimator animator;
     private final Handler main = new Handler(Looper.getMainLooper());
 
     @Nullable
@@ -29,8 +33,10 @@ public class SplashFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater,
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
+
         View v = inflater.inflate(R.layout.fragment_splash, container, false);
         progressBar = v.findViewById(R.id.progressBar);
+        progressBar.setProgress(0);
         return v;
     }
 
@@ -38,52 +44,67 @@ public class SplashFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // Start animation 0 -> 95% in ~2s
-        animateProgressTo(95, 2000, () -> {
-            reached95 = true;
-            tryFinish();
-        });
+        // Hide UI for full splash
+        ((MainActivity) requireActivity()).hideChrome();
 
-        // Start real initialization in background
+        // Animate 0 → 100 instantly when finished
+        animateProgress();
+
+        // Background init
         new Thread(() -> {
-            doRealInitialization();          // replace with real tasks when ready
-            initFinished = true;
-            main.post(this::tryFinish);
+            doInit();
+            initDone = true;
+            main.post(this::tryExit);
         }).start();
     }
 
-    private void animateProgressTo(int target, long durationMs, Runnable endAction) {
-        int start = progressBar.getProgress();
-        ValueAnimator animator = ValueAnimator.ofInt(start, target);
-        animator.setDuration(durationMs);
-        animator.addUpdateListener(a ->
-                progressBar.setProgress((Integer) a.getAnimatedValue()));
-        if (endAction != null) animator.addListener(new SimpleAnimatorEnd(endAction));
+    private void animateProgress() {
+        animator = ValueAnimator.ofInt(0, 100);
+        animator.setDuration(2000);
+        animator.addUpdateListener(a -> {
+            if (!isAdded()) return;
+            progressBar.setProgress((Integer) a.getAnimatedValue());
+        });
+
+        animator.addListener(new SimpleAnimatorEnd(() -> {
+            animationDone = true;
+            tryExit();
+        }));
+
         animator.start();
     }
 
-    private void tryFinish() {
-        if (!isAdded()) return;
-        if (reached95 && initFinished) {
-            // 95 -> 100 in 300ms, hold briefly, then navigate
-            animateProgressTo(100, 300, () -> main.postDelayed(this::goNext, 150));
+    private void tryExit() {
+        if (!isAdded() || navigated) return;
+
+        if (animationDone && initDone) {
+            navigated = true;
+
+            if (animator != null && animator.isRunning()) {
+                animator.cancel();
+            }
+
+            goNext();
         }
     }
 
     private void goNext() {
         if (!isAdded()) return;
-        NavHostFragment.findNavController(this)
-                .navigate(R.id.action_splash_to_home);
+
+        MainActivity act = (MainActivity) requireActivity();
+        act.exitSplash();
+
+
+        act.getSupportFragmentManager().beginTransaction()
+                .setCustomAnimations(0, 0)
+                .replace(R.id.flFragment, new MapFragment())
+                .commitAllowingStateLoss();
     }
 
-    // TODO: replace with real startup work (Firebase init, read prefs, remote config, etc.)
-    private void doRealInitialization() {
-        try {
-            Thread.sleep(1200); // simulate variable work; remove when real tasks added
-        } catch (InterruptedException ignored) {}
+    private void doInit() {
+        try { Thread.sleep(800); } catch (InterruptedException ignored) {}
     }
 
-    // Small helper so we don’t implement all animator callbacks
     private static class SimpleAnimatorEnd implements android.animation.Animator.AnimatorListener {
         private final Runnable onEnd;
         SimpleAnimatorEnd(Runnable onEnd) { this.onEnd = onEnd; }
