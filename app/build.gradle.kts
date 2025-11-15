@@ -43,4 +43,6 @@ dependencies {
     implementation(libs.google.location)
     implementation(libs.google.maps)
     implementation(libs.android.maps.utils)
+    implementation(libs.androidx.cardview)
+
 }
