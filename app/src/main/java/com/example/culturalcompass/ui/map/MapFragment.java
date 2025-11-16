@@ -45,6 +45,15 @@ import com.google.android.libraries.places.api.model.PhotoMetadata;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.android.libraries.places.api.net.SearchNearbyRequest;
+import android.app.Activity;
+import android.content.Intent;
+import android.widget.EditText;
+
+import com.google.android.gms.common.api.Status;
+import com.google.android.libraries.places.widget.Autocomplete;
+import com.google.android.libraries.places.widget.AutocompleteActivity;
+import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
+
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -79,6 +88,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private Spinner spinnerFilter;
     private Spinner spinnerSort;
+    private EditText searchBar;
+
 
 
 
@@ -91,12 +102,20 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private SortMode currentSortMode = SortMode.DISTANCE;
 
     private ActivityResultLauncher<String> requestPermissionLauncher;
+    private ActivityResultLauncher<Intent> autocompleteLauncher;
+
+    // When true => live GPS moves the map & reloads nearby places
+    // When false => user is exploring a searched/virtual location
+    private boolean followUserLocation = true;
+
+
 
     public MapFragment() {}
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
 
         // --- 1) Initialize Places SDK (New) once ---
         if (!Places.isInitialized()) {
@@ -122,6 +141,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
+                // Ignore GPS updates while user is exploring a searched place
+                if (!followUserLocation) {
+                    return;
+                }
+
                 android.location.Location location = locationResult.getLastLocation();
                 if (location == null) return;
 
@@ -157,6 +181,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             }
         };
 
+
         // Runtime permission request launcher
         requestPermissionLauncher =
                 registerForActivityResult(
@@ -171,6 +196,27 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                             }
                         }
                 );
+
+        autocompleteLauncher =
+                registerForActivityResult(
+                        new ActivityResultContracts.StartActivityForResult(),
+                        result -> {
+                            int code = result.getResultCode();
+                            Intent data = result.getData();
+                            if (code == Activity.RESULT_OK && data != null) {
+                                Place place = Autocomplete.getPlaceFromIntent(data);
+                                onPlaceSelected(place);
+                            } else if (code == AutocompleteActivity.RESULT_ERROR && data != null) {
+                                Status status = Autocomplete.getStatusFromIntent(data);
+                                Toast.makeText(
+                                        requireContext(),
+                                        "Search error: " + status.getStatusMessage(),
+                                        Toast.LENGTH_SHORT
+                                ).show();
+                            }
+                        }
+                );
+
     }
 
     @Override
@@ -178,6 +224,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                              Bundle savedInstanceState) {
 
         View view = inflater.inflate(R.layout.fragment_map, container, false);
+        searchBar = view.findViewById(R.id.searchBar);
+        searchBar.setFocusable(false);
+        searchBar.setOnClickListener(v -> openSearchAutocomplete());
+
 
         mapView = view.findViewById(R.id.map);
         mapView.onCreate(savedInstanceState);
@@ -203,10 +253,76 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         return view;
     }
+    private void openSearchAutocomplete() {
+        List<Place.Field> fields = Arrays.asList(
+                Place.Field.ID,
+                Place.Field.DISPLAY_NAME,
+                Place.Field.LOCATION
+        );
+
+        Intent intent = new Autocomplete.IntentBuilder(
+                AutocompleteActivityMode.OVERLAY,
+                fields
+        ).build(requireContext());
+
+        autocompleteLauncher.launch(intent);
+    }
+
+    private void onPlaceSelected(Place place) {
+        LatLng latLng = place.getLocation();
+        if (latLng == null) return;
+
+        // Stop following live GPS, we are exploring a manual/search location
+        followUserLocation = false;
+
+        // 🔹 Show where the user is exploring (place name)
+        if (searchBar != null) {
+            String name = place.getDisplayName();
+            if (name != null) {
+                searchBar.setText(name);
+            }
+        }
+
+        // Set virtual location
+        userLat = latLng.latitude;
+        userLon = latLng.longitude;
+        lastFetchLat = userLat;
+        lastFetchLon = userLon;
+
+        // Move camera
+        if (mMap != null) {
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f));
+        }
+
+        // Load nearby attractions around this searched point
+        loadNearbyAttractions(userLat, userLon);
+    }
+
+
 
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
+        mMap.setOnMyLocationButtonClickListener(() -> {
+            // User tapped the default My Location button
+            followUserLocation = true;   // start following GPS again
+
+            // 🔹 Clear search bar (back to "search mode")
+            if (searchBar != null) {
+                searchBar.setText("");
+                // Optional: ensure hint is visible again
+                searchBar.setHint("Search for a place");
+            }
+
+            // Recenter + reload from real location
+            getUserLocation();           // this already moves the camera and calls loadNearbyAttractions()
+
+            // Return true to consume the click (we already handle camera movement)
+            return true;
+        });
+
+
+
 
         mMap.getUiSettings().setZoomControlsEnabled(true);
 
@@ -406,9 +522,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 Place.Field.PHOTO_METADATAS
         );
 
-        // 2) Define circular search area (10km radius)
+        // 2) Define circular search area (5km radius)
         LatLng center = new LatLng(lat, lon);
-        CircularBounds circle = CircularBounds.newInstance(center, /* radius = */ 10000);
+        CircularBounds circle = CircularBounds.newInstance(center, /* radius = */ 5000);
 
         // 3) Types to include (cultural / historical)
 // 3) Types to include (cultural / historical)
