@@ -420,7 +420,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         SearchNearbyRequest request =
                 SearchNearbyRequest.builder(circle, placeFields)
                         .setIncludedTypes(includedTypes)
-                        .setMaxResultCount(30)
+                        .setMaxResultCount(20)
                         .setRankPreference(SearchNearbyRequest.RankPreference.DISTANCE)
                         .build();
 
