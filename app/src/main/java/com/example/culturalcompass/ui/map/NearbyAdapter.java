@@ -63,11 +63,12 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
         }
         holder.txtDistance.setText(distanceText);
 
-        // --- Rating chip (4,4 ★★★★☆ (88)) ---
+// --- Rating chip (4,4 ★★★★☆ (88)) or "No ratings yet" ---
         Double rating = a.getRating();
         Integer ratingCount = a.getRatingCount();
 
         if (rating != null && ratingCount != null && ratingCount > 0) {
+            // Show normal rating chip
             String ratingStr = String.format(Locale.getDefault(), "%.1f", rating);
             holder.txtRatingValue.setText(ratingStr);
             holder.ratingBar.setRating(rating.floatValue());
@@ -75,10 +76,18 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
             String countStr = "(" + ratingCount + ")";
             holder.txtRatingCount.setText(countStr);
 
+            holder.ratingBar.setVisibility(View.VISIBLE);
+            holder.txtRatingCount.setVisibility(View.VISIBLE);
             holder.layoutRating.setVisibility(View.VISIBLE);
+
         } else {
-            holder.layoutRating.setVisibility(View.GONE);
+            // Show chip with "No ratings yet"
+            holder.txtRatingValue.setText("No ratings yet");
+            holder.ratingBar.setVisibility(View.GONE);
+            holder.txtRatingCount.setVisibility(View.GONE);
+            holder.layoutRating.setVisibility(View.VISIBLE);
         }
+
 
         // --- Landmark photo ---
         holder.imgPhoto.setImageResource(R.drawable.ic_landmark_placeholder);

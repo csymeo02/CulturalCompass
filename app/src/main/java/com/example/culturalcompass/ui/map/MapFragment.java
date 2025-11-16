@@ -220,6 +220,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     }
 
     private void setupFilterSpinner() {
+
         // Options shown to the user
         String[] filterOptions = new String[] {
                 "All types",
@@ -230,10 +231,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_spinner_item,
+                R.layout.spinner_item,
                 filterOptions
         );
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        adapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
+
         spinnerFilter.setAdapter(adapter);
 
         spinnerFilter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -283,10 +285,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_spinner_item,
+                R.layout.spinner_item,
                 sortOptions
         );
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        adapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
         spinnerSort.setAdapter(adapter);
 
         spinnerSort.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -404,11 +406,18 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         CircularBounds circle = CircularBounds.newInstance(center, /* radius = */ 10000);
 
         // 3) Types to include (cultural / historical)
+// 3) Types to include (cultural / historical)
         final List<String> includedTypes = Arrays.asList(
-                "tourist_attraction",
                 "museum",
-                "art_gallery"
+                "art_gallery",
+                "cultural_landmark",
+                "historical_place",
+                "monument",
+                "performing_arts_theater",
+                "sculpture",
+                "tourist_attraction"
         );
+
 
 
 
