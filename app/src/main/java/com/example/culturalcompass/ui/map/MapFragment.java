@@ -169,7 +169,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     lastFetchLon = newLon;
 
                     // Call Nearby Search (New)
-                    loadNearbyAttractions(newLat, newLon);
+                    requestNearbyForCurrentFilter(newLat, newLon);
 
                     // Move camera smoothly
                     if (mMap != null) {
@@ -295,7 +295,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
 
         // Load nearby attractions around this searched point
-        loadNearbyAttractions(userLat, userLon);
+        requestNearbyForCurrentFilter(userLat, userLon);
     }
 
 
@@ -386,7 +386,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         break;
                 }
 
-                applyFiltersAndSorting();
+                // After updating filter flags, fetch new data if we already know a center
+                if (lastFetchLat != 0 || lastFetchLon != 0) {
+                    // New API request depending on filter (more results of that type)
+                    requestNearbyForCurrentFilter(lastFetchLat, lastFetchLon);
+                } else {
+                    // No location yet, just apply filters to whatever we have (likely empty)
+                    applyFiltersAndSorting();
+                }
+
             }
 
             @Override
@@ -486,7 +494,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         LatLng userPosition = new LatLng(userLat, userLon);
 
                         // First Nearby Search
-                        loadNearbyAttractions(userLat, userLon);
+                        requestNearbyForCurrentFilter(userLat, userLon);
 
                         if (mMap != null) {
                             mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(userPosition, 16f));
@@ -508,7 +516,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     /**
      * Uses Places SDK for Android (New) Nearby Search to get nearby cultural places.
      */
-    private void loadNearbyAttractions(double lat, double lon) {
+    private void loadNearbyAttractions(double lat, double lon, List<String> includedTypes) {
 
         // 1) Define which fields we want back for each Place
         final List<Place.Field> placeFields = Arrays.asList(
@@ -526,16 +534,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         LatLng center = new LatLng(lat, lon);
         CircularBounds circle = CircularBounds.newInstance(center, /* radius = */ 5000);
 
-        // 3) Types to include (cultural / historical)
-// 3) Types to include (cultural / historical)
-        final List<String> includedTypes = Arrays.asList(
-                "tourist_attraction",
-                "museum",
-                "art_gallery"
-        );
-
-
-
 
         // 5) Build Nearby Search request
         SearchNearbyRequest request =
@@ -544,6 +542,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         .setMaxResultCount(20)
                         .setRankPreference(SearchNearbyRequest.RankPreference.DISTANCE)
                         .build();
+
+
 
         // 6) Call PlacesClient
         placesClient.searchNearby(request)
@@ -632,6 +632,38 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     }
                 });
 
+    }
+
+    private void requestNearbyForCurrentFilter(double lat, double lon) {
+        List<String> types;
+
+        // Spinner states:
+        // 0: All types -> all three true
+        // 1: Tourist attractions -> only that true
+        // 2: Museums -> only that true
+        // 3: Art galleries -> only that true
+
+        if (filterTouristAttraction && filterMuseum && filterArtGallery) {
+            // All types
+            types = Arrays.asList("tourist_attraction", "museum", "art_gallery");
+
+        } else if (filterTouristAttraction && !filterMuseum && !filterArtGallery) {
+            // Tourist attractions only
+            types = Arrays.asList("tourist_attraction");
+
+        } else if (!filterTouristAttraction && filterMuseum && !filterArtGallery) {
+            // Museums only
+            types = Arrays.asList("museum");
+
+        } else if (!filterTouristAttraction && !filterMuseum && filterArtGallery) {
+            // Art galleries only
+            types = Arrays.asList("art_gallery");
+
+        } else {
+            types = Arrays.asList("tourist_attraction", "museum", "art_gallery");
+        }
+
+        loadNearbyAttractions(lat, lon, types);
     }
 
     private void applyFiltersAndSorting() {
