@@ -53,6 +53,35 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
         holder.txtName.setText(a.getName());
         holder.txtType.setText(a.getType());
 
+        // --- Type chip background ---
+        String typeKey = a.getPrimaryTypeKey(); // IMPORTANT: use primaryTypeKey, not label
+
+        if (typeKey != null) {
+            switch (typeKey) {
+
+                case "museum":
+                    holder.txtType.setBackgroundResource(R.drawable.chip_museum);
+                    holder.txtType.setTextColor(0xFF5A3E2B); // dark brown
+                    break;
+
+                case "art_gallery":
+                    holder.txtType.setBackgroundResource(R.drawable.chip_art_gallery);
+                    holder.txtType.setTextColor(0xFF0A3A5C); // blue
+                    break;
+
+                case "tourist_attraction":
+                    holder.txtType.setBackgroundResource(R.drawable.chip_attraction);
+                    holder.txtType.setTextColor(0xFF1F6B1F); // dark green
+                    break;
+
+                default:
+                    // fallback: treat as Art Gallery style
+                    holder.txtType.setBackgroundResource(R.drawable.chip_art_gallery);
+                    holder.txtType.setTextColor(0xFF000000);
+                    break;
+            }
+        }
+
         // --- Distance formatting ---
         double meters = a.getDistanceMeters();
         String distanceText;

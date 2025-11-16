@@ -2,6 +2,9 @@ package com.example.culturalcompass.ui.map;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -30,6 +33,8 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
@@ -576,10 +581,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             // update markers
             mMap.clear();
             for (Attraction a : filtered) {
+                BitmapDescriptor icon = getMarkerIcon(a.getPrimaryTypeKey());
+
                 mMap.addMarker(
                         new MarkerOptions()
                                 .position(new LatLng(a.getLat(), a.getLng()))
                                 .title(a.getName())
+                                .icon(icon)
                 );
             }
         });
@@ -593,14 +601,57 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             return -1.0;
         }
 
-        double R = r;          // rating
-        double vD = v;         // votes as double
-        double m = 20.0;       // minimum reviews threshold (tune if you want)
-        double C = 4.0;        // assumed average rating
+        double rating = r;      // 1..5
+        double n = v;           // number of reviews
+        double z = 1.96;        // 95% confidence
 
-        return (vD / (vD + m)) * R + (m / (vD + m)) * C;
+        // 1) Convert to 0..1
+        double p = rating / 5.0;
+
+        double z2 = z * z;
+
+        // 2) Wilson lower bound in 0..1
+        double numerator = p + z2 / (2.0 * n)
+                - z * Math.sqrt((p * (1.0 - p) + z2 / (4.0 * n)) / n);
+        double denominator = 1.0 + z2 / n;
+
+        double lowerBound = numerator / denominator;
+
+        // 3) Convert back to 0..5 scale
+        return lowerBound * 5.0;
     }
 
+    private BitmapDescriptor getMarkerIcon(String primaryTypeKey) {
+
+        int iconRes;
+
+        switch (primaryTypeKey) {
+            case "tourist_attraction":
+                iconRes = R.drawable.ic_tourist_attraction;
+                break;
+
+            case "museum":
+                iconRes = R.drawable.ic_museum;
+                break;
+
+            case "art_gallery":
+                iconRes = R.drawable.ic_art_gallery;
+                break;
+
+            default:
+                iconRes = R.drawable.ic_tourist_attraction; // fallback or generic
+                break;
+        }
+
+        // Convert drawable to bitmap and scale it nice & small
+        Drawable drawable = ContextCompat.getDrawable(requireContext(), iconRes);
+        if (drawable == null) return null;
+
+        Bitmap bitmap = ((BitmapDrawable) drawable).getBitmap();
+        Bitmap scaled = Bitmap.createScaledBitmap(bitmap, 120, 120, false);
+
+        return BitmapDescriptorFactory.fromBitmap(scaled);
+    }
 
 
     // --- Lifecycle ---
