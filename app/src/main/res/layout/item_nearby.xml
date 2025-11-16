@@ -2,6 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="horizontal"
     android:padding="10dp"
     android:layout_marginHorizontal="8dp"
@@ -9,14 +10,24 @@
     android:background="@drawable/rounded_card"
     android:gravity="center_vertical">
 
-    <!-- IMAGE -->
-    <ImageView
-        android:id="@+id/imgPhoto"
+    <!-- IMAGE with rounded corners -->
+    <androidx.cardview.widget.CardView
         android:layout_width="80dp"
         android:layout_height="80dp"
         android:layout_marginEnd="10dp"
-        android:scaleType="centerCrop"
-        android:background="#DDDDDD" />
+        app:cardCornerRadius="8dp"
+        app:cardUseCompatPadding="false"
+        app:cardPreventCornerOverlap="true">
+
+        <ImageView
+            android:id="@+id/imgPhoto"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop" />
+
+    </androidx.cardview.widget.CardView>
+
+
 
     <!-- RIGHT SIDE -->
     <LinearLayout

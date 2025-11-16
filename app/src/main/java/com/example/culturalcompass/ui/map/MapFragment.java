@@ -33,6 +33,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 // Places SDK (New)
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.CircularBounds;
+import com.google.android.libraries.places.api.model.PhotoMetadata;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.android.libraries.places.api.net.SearchNearbyRequest;
@@ -242,25 +243,19 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 Place.Field.PRIMARY_TYPE,
                 Place.Field.PRIMARY_TYPE_DISPLAY_NAME,
                 Place.Field.RATING,
-                Place.Field.USER_RATING_COUNT
+                Place.Field.USER_RATING_COUNT,
+                Place.Field.PHOTO_METADATAS
         );
 
-        // 2) Define circular search area (5km radius)
+        // 2) Define circular search area (10km radius)
         LatLng center = new LatLng(lat, lon);
-        CircularBounds circle = CircularBounds.newInstance(center, /* radius = */ 5000);
+        CircularBounds circle = CircularBounds.newInstance(center, /* radius = */ 10000);
 
         // 3) Types to include (cultural / historical)
         final List<String> includedTypes = Arrays.asList(
                 "tourist_attraction",
                 "museum",
-                "art_gallery",
-                "church",
-                "hindu_temple",
-                "mosque",
-                "synagogue",
-                "park",
-                "library",
-                "cemetery"
+                "art_gallery"
         );
 
 
@@ -269,7 +264,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         SearchNearbyRequest request =
                 SearchNearbyRequest.builder(circle, placeFields)
                         .setIncludedTypes(includedTypes)
-                        .setMaxResultCount(10)
+                        .setMaxResultCount(20)
                         .setRankPreference(SearchNearbyRequest.RankPreference.DISTANCE)
                         .build();
 
@@ -305,6 +300,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                             typeLabel = place.getPrimaryType();
                         }
 
+                        PhotoMetadata photoMetadata = null;
+                        if (place.getPhotoMetadatas() != null && !place.getPhotoMetadatas().isEmpty()) {
+                            photoMetadata = place.getPhotoMetadatas().get(0);
+                        }
+
 
                         Double rating = place.getRating();              // can be null
                         Integer ratingCount = place.getUserRatingCount(); // can be null
@@ -317,7 +317,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                                         distanceMeters,
                                         typeLabel,
                                         rating,
-                                        ratingCount
+                                        ratingCount,
+                                        photoMetadata
                                 )
                         );
 
@@ -329,9 +330,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                             Comparator.comparingDouble(Attraction::getDistanceMeters)
                     );
 
-                    // Keep only top 10
-                    List<Attraction> top10 =
-                            attractions.subList(0, Math.min(10, attractions.size()));
+                    // Keep only top 20
+                    List<Attraction> top20 =
+                            attractions.subList(0, Math.min(20, attractions.size()));
 
                     // Update UI: clear markers, set adapter, add markers
                     if (getActivity() == null) return;
@@ -341,10 +342,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                             mMap.clear();
                         }
 
-                        recyclerNearby.setAdapter(new NearbyAdapter(top10));
+                        recyclerNearby.setAdapter(new NearbyAdapter(top20,placesClient));
 
                         if (mMap != null) {
-                            for (Attraction a : top10) {
+                            for (Attraction a : top20) {
                                 mMap.addMarker(
                                         new MarkerOptions()
                                                 .position(new LatLng(a.getLat(), a.getLng()))

@@ -16,13 +16,20 @@ import com.example.culturalcompass.model.Attraction;
 
 import java.util.List;
 import java.util.Locale;
+import com.google.android.libraries.places.api.net.PlacesClient;
+import com.google.android.libraries.places.api.model.PhotoMetadata;
+import com.google.android.libraries.places.api.net.FetchPhotoRequest;
+
+
 
 public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder> {
 
     private List<Attraction> items;
+    private PlacesClient placesClient;
 
-    public NearbyAdapter(List<Attraction> items) {
+    public NearbyAdapter(List<Attraction> items, PlacesClient placesClient) {
         this.items = items;
+        this.placesClient = placesClient;
     }
 
     @NonNull
@@ -56,10 +63,8 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
         Integer ratingCount = a.getRatingCount();
 
         if (rating != null && ratingCount != null && ratingCount > 0) {
-            // 4,4 or 4.4 depending on locale
             String ratingStr = String.format(Locale.getDefault(), "%.1f", rating);
             holder.txtRatingValue.setText(ratingStr);
-
             holder.ratingBar.setRating(rating.floatValue());
 
             String countStr = "(" + ratingCount + ")";
@@ -67,12 +72,34 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
 
             holder.layoutRating.setVisibility(View.VISIBLE);
         } else {
-            // hide the whole chip if no rating
             holder.layoutRating.setVisibility(View.GONE);
         }
 
-        // --- TODO: landmark photo (for now keep placeholder) ---
-        // holder.imgPhoto.setImageResource(R.drawable.some_placeholder);
+        // --- Landmark photo ---
+        holder.imgPhoto.setImageResource(R.drawable.ic_landmark_placeholder);
+
+        PhotoMetadata meta = a.getPhotoMetadata();
+
+        if (meta != null && placesClient != null) {
+            FetchPhotoRequest request = FetchPhotoRequest.builder(meta)
+                    .setMaxWidth(400)
+                    .setMaxHeight(400)
+                    .build();
+
+            int boundPosition = holder.getBindingAdapterPosition();
+
+            placesClient.fetchPhoto(request)
+                    .addOnSuccessListener(response -> {
+                        if (holder.getBindingAdapterPosition() == boundPosition) {
+                            holder.imgPhoto.setImageBitmap(response.getBitmap());
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        holder.imgPhoto.setImageResource(R.drawable.ic_landmark_placeholder);
+                    });
+        } else {
+            holder.imgPhoto.setImageResource(R.drawable.ic_landmark_placeholder);
+        }
 
         // --- Heart toggle ---
         updateHeartIcon(holder, a.isFavorite());
@@ -82,6 +109,7 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
             updateHeartIcon(holder, newFav);
         });
     }
+
 
 
     private void updateHeartIcon(ViewHolder holder, boolean favorite) {
@@ -101,7 +129,6 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
 
         ImageView imgPhoto;
         TextView txtName;
-        TextView txtRating;
         TextView txtType;
         TextView txtDistance;
         ImageView imgFavorite;
