@@ -408,14 +408,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         // 3) Types to include (cultural / historical)
 // 3) Types to include (cultural / historical)
         final List<String> includedTypes = Arrays.asList(
+                "tourist_attraction",
                 "museum",
-                "art_gallery",
-                "cultural_landmark",
-                "historical_place",
-                "monument",
-                "performing_arts_theater",
-                "sculpture",
-                "tourist_attraction"
+                "art_gallery"
         );
 
 
@@ -425,7 +420,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         SearchNearbyRequest request =
                 SearchNearbyRequest.builder(circle, placeFields)
                         .setIncludedTypes(includedTypes)
-                        .setMaxResultCount(20)
+                        .setMaxResultCount(30)
                         .setRankPreference(SearchNearbyRequest.RankPreference.DISTANCE)
                         .build();
 
