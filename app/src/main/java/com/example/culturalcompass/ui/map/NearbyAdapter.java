@@ -32,6 +32,11 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
         this.placesClient = placesClient;
     }
 
+    public void updateItems(List<Attraction> newItems) {
+        this.items = newItems;
+        notifyDataSetChanged();
+    }
+
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -95,10 +100,7 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
                         }
                     })
                     .addOnFailureListener(e -> {
-                        holder.imgPhoto.setImageResource(R.drawable.ic_landmark_placeholder);
                     });
-        } else {
-            holder.imgPhoto.setImageResource(R.drawable.ic_landmark_placeholder);
         }
 
         // --- Heart toggle ---

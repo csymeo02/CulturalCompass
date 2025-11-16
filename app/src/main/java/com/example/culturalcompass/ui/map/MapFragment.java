@@ -6,6 +6,9 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Spinner;
+import android.widget.ArrayAdapter;
+import android.widget.AdapterView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -57,11 +60,30 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private RecyclerView recyclerNearby;
     private LocationCallback locationCallback;
     private LocationRequest locationRequest;
+    private NearbyAdapter nearbyAdapter;
+
 
     // To avoid too many API calls:
     private static final float MIN_DISTANCE_CHANGE = 100f; // meters
     private double lastFetchLat = 0;
     private double lastFetchLon = 0;
+
+
+    // master list from Places
+    private final List<Attraction> allAttractions = new ArrayList<>();
+
+    private Spinner spinnerFilter;
+    private Spinner spinnerSort;
+
+
+
+    // filter state
+    private boolean filterTouristAttraction = true;
+    private boolean filterMuseum = true;
+    private boolean filterArtGallery = true;
+
+    private enum SortMode { DISTANCE, RATING,BEST }
+    private SortMode currentSortMode = SortMode.DISTANCE;
 
     private ActivityResultLauncher<String> requestPermissionLauncher;
 
@@ -158,6 +180,21 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         recyclerNearby = view.findViewById(R.id.recyclerNearby);
         recyclerNearby.setLayoutManager(new LinearLayoutManager(requireContext()));
+        nearbyAdapter = new NearbyAdapter(new ArrayList<>(), placesClient);
+        recyclerNearby.setAdapter(nearbyAdapter);
+
+        // --- Spinners ---
+        spinnerFilter = view.findViewById(R.id.spinnerFilter);
+        spinnerSort   = view.findViewById(R.id.spinnerSort);
+
+        // initial state
+        filterTouristAttraction = true;
+        filterMuseum = true;
+        filterArtGallery = true;
+        currentSortMode = SortMode.DISTANCE;
+
+        setupFilterSpinner();
+        setupSortSpinner();
 
         return view;
     }
@@ -182,6 +219,103 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
+    private void setupFilterSpinner() {
+        // Options shown to the user
+        String[] filterOptions = new String[] {
+                "All types",
+                "Tourist attractions",
+                "Museums",
+                "Art galleries"
+        };
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_spinner_item,
+                filterOptions
+        );
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerFilter.setAdapter(adapter);
+
+        spinnerFilter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                // Update filter booleans depending on selection
+                switch (position) {
+                    case 0: // All types
+                        filterTouristAttraction = true;
+                        filterMuseum = true;
+                        filterArtGallery = true;
+                        break;
+                    case 1: // Tourist attractions only
+                        filterTouristAttraction = true;
+                        filterMuseum = false;
+                        filterArtGallery = false;
+                        break;
+                    case 2: // Museums only
+                        filterTouristAttraction = false;
+                        filterMuseum = true;
+                        filterArtGallery = false;
+                        break;
+                    case 3: // Art galleries only
+                        filterTouristAttraction = false;
+                        filterMuseum = false;
+                        filterArtGallery = true;
+                        break;
+                }
+
+                applyFiltersAndSorting();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // do nothing
+            }
+        });
+    }
+
+    private void setupSortSpinner() {
+        String[] sortOptions = new String[] {
+                "Distance",
+                "Rating",
+                "Best overall"
+
+        };
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_spinner_item,
+                sortOptions
+        );
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerSort.setAdapter(adapter);
+
+        spinnerSort.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                switch (position) {
+                    case 0:
+                        currentSortMode = SortMode.DISTANCE;
+                        break;
+                    case 1:
+                        currentSortMode = SortMode.RATING;
+                        break;
+                    case 2:
+                        currentSortMode = SortMode.BEST;
+                        break;
+                }
+                applyFiltersAndSorting();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) { }
+        });
+
+// default selection: Distance
+        spinnerSort.setSelection(0);
+
+    }
+
+
     private void enableMyLocation() {
         if (mMap == null) return;
 
@@ -195,6 +329,24 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
         }
     }
+    private double computeCombinedScore(Attraction a) {
+        // 1) Rating component
+        double weightedRating = computeWeightedRating(a); // 0..5-ish
+        if (weightedRating < 0) {
+            // no rating -> treat as very low rating
+            weightedRating = 0.0;
+        }
+
+        // 2) Distance penalty (in km)
+        double distanceKm = a.getDistanceMeters() / 1000.0;
+
+        // Each extra km subtracts a bit from the score.
+        // Tune 0.15 as you like: higher = distance more important.
+        double penalty = 0.15 * distanceKm;
+
+        return weightedRating - penalty;
+    }
+
 
     private void getUserLocation() {
         fusedLocationClient.getLastLocation()
@@ -293,11 +445,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                             name = "Unknown place";
                         }
 
-                        // Human readable type label, e.g. "Museum"
+                        String primaryTypeKey = place.getPrimaryType(); // "museum", "art_gallery", "tourist_attraction"
+
+                        // Label, e.g. "Museum"
                         String typeLabel = place.getPrimaryTypeDisplayName();
                         if (typeLabel == null || typeLabel.isEmpty()) {
-                            // fallback to raw primaryType, e.g. "museum"
-                            typeLabel = place.getPrimaryType();
+                            typeLabel = primaryTypeKey;
                         }
 
                         PhotoMetadata photoMetadata = null;
@@ -316,6 +469,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                                         placeLoc.longitude,
                                         distanceMeters,
                                         typeLabel,
+                                        primaryTypeKey,
                                         rating,
                                         ratingCount,
                                         photoMetadata
@@ -330,31 +484,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                             Comparator.comparingDouble(Attraction::getDistanceMeters)
                     );
 
-                    // Keep only top 20
+                    // Keep only top 20 by distance (optional pre-limit)
                     List<Attraction> top20 =
                             attractions.subList(0, Math.min(20, attractions.size()));
 
-                    // Update UI: clear markers, set adapter, add markers
                     if (getActivity() == null) return;
 
                     getActivity().runOnUiThread(() -> {
-                        if (mMap != null) {
-                            mMap.clear();
-                        }
-
-                        recyclerNearby.setAdapter(new NearbyAdapter(top20,placesClient));
-
-                        if (mMap != null) {
-                            for (Attraction a : top20) {
-                                mMap.addMarker(
-                                        new MarkerOptions()
-                                                .position(new LatLng(a.getLat(), a.getLng()))
-                                                .title(a.getName())
-                                );
-                            }
-                        }
+                        allAttractions.clear();
+                        allAttractions.addAll(top20);
+                        applyFiltersAndSorting();
                     });
-
                 })
                 .addOnFailureListener(e -> {
                     e.printStackTrace();
@@ -366,7 +506,98 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         ).show();
                     }
                 });
+
     }
+
+    private void applyFiltersAndSorting() {
+        if (getActivity() == null || mMap == null) return;
+
+        // 1) Filter by type
+        List<Attraction> filtered = new ArrayList<>();
+
+        for (Attraction a : allAttractions) {
+            String key = a.getPrimaryTypeKey();
+            if (key == null) continue;
+
+            boolean include = false;
+
+            if (filterTouristAttraction && "tourist_attraction".equals(key)) {
+                include = true;
+            }
+            if (filterMuseum && "museum".equals(key)) {
+                include = true;
+            }
+            if (filterArtGallery && "art_gallery".equals(key)) {
+                include = true;
+            }
+
+            if (include) {
+                filtered.add(a);
+            }
+        }
+
+        // If all filters off, show nothing (or you could decide to show all)
+        // 2) Sort
+        if (currentSortMode == SortMode.DISTANCE) {
+
+            Collections.sort(filtered,
+                    Comparator.comparingDouble(Attraction::getDistanceMeters));
+
+        } else if (currentSortMode == SortMode.RATING) {
+
+            // Sort by weighted rating (rating + number of reviews), desc
+            Collections.sort(filtered, (a, b) -> {
+                double sa = computeWeightedRating(a);
+                double sb = computeWeightedRating(b);
+                return Double.compare(sb, sa); // descending
+            });
+
+        } else if (currentSortMode == SortMode.BEST) {
+
+            // Combined score: rating & distance
+            Collections.sort(filtered, (a, b) -> {
+                double sa = computeCombinedScore(a);
+                double sb = computeCombinedScore(b);
+                return Double.compare(sb, sa); // descending
+            });
+        }
+
+
+
+        // 3) Update UI: adapter + markers
+        getActivity().runOnUiThread(() -> {
+            // update adapter
+            nearbyAdapter.updateItems(filtered);
+
+            // update markers
+            mMap.clear();
+            for (Attraction a : filtered) {
+                mMap.addMarker(
+                        new MarkerOptions()
+                                .position(new LatLng(a.getLat(), a.getLng()))
+                                .title(a.getName())
+                );
+            }
+        });
+    }
+    private double computeWeightedRating(Attraction a) {
+        Double r = a.getRating();
+        Integer v = a.getRatingCount();
+
+        if (r == null || v == null || v == 0) {
+            // No rating or no votes -> treat as very low score
+            return -1.0;
+        }
+
+        double R = r;          // rating
+        double vD = v;         // votes as double
+        double m = 20.0;       // minimum reviews threshold (tune if you want)
+        double C = 4.0;        // assumed average rating
+
+        return (vD / (vD + m)) * R + (m / (vD + m)) * C;
+    }
+
+
 
     // --- Lifecycle ---
     @Override

@@ -18,16 +18,40 @@
 
     </androidx.cardview.widget.CardView>
 
-    <!-- Title -->
-    <TextView
-        android:id="@+id/titleNearby"
-        android:text="Nearby Landmarks"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:paddingStart="16dp"
+    <!-- Header: title + filter/sort spinners -->
+    <LinearLayout
+        android:id="@+id/layoutHeaderNearby"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="12dp"
         android:paddingTop="8dp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
+        android:paddingBottom="4dp">
+
+        <TextView
+            android:id="@+id/txtNearbyTitle"
+            android:layout_width="177dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Nearby landmarks"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/spinnerFilter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:spinnerMode="dropdown" />
+
+        <Spinner
+            android:id="@+id/spinnerSort"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:spinnerMode="dropdown" />
+    </LinearLayout>
+
 
     <!-- List of nearest attractions -->
     <androidx.recyclerview.widget.RecyclerView
