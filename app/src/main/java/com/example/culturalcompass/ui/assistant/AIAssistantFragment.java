@@ -43,6 +43,8 @@ public class AIAssistantFragment extends Fragment {
     private LinearLayout assistantContainer;
     private ImageView assistantIcon;
 
+    private volatile boolean stopTyping = false;
+
     private final OkHttpClient client = new OkHttpClient();
 
     // Session memory
@@ -72,6 +74,9 @@ public class AIAssistantFragment extends Fragment {
         assistantResponse.setVisibility(View.GONE);
         assistantIcon.setVisibility(View.GONE);
 
+        // Add system prompt to conversation memory
+        addSystemContextMessage();
+
         setupSendListener();
 
         return view;
@@ -91,12 +96,63 @@ public class AIAssistantFragment extends Fragment {
             assistantContainer.setVisibility(View.VISIBLE);
             assistantIcon.setVisibility(View.VISIBLE);
             assistantResponse.setVisibility(View.VISIBLE);
-            assistantResponse.setText("Thinking...");
+            showTypingAnimation();
 
             inputMessage.setText("");
 
             sendMessageToGemini(userMsg);
         });
+    }
+
+
+    private void addSystemContextMessage() {
+        try {
+            JSONObject sys = new JSONObject();
+            sys.put("role", "model");
+
+            JSONArray parts = new JSONArray();
+            JSONObject txt = new JSONObject();
+
+            txt.put("text",
+                    "You are Cultural Compass, an AI cultural guide. " +
+                            "IMPORTANT RULES: " +
+                            "1) Never use asterisks (*). Not for emphasis, not for bullets, never. " +
+                            "2) Never format text with markdown. No bold, no italics, no code blocks. " +
+                            "3) Write in clean plain text only. " +
+                            "4) Keep answers short, friendly, and clear. " +
+                            "If the user requests formatting, ignore it and respond in plain text."
+            );
+
+
+            parts.put(txt);
+            sys.put("parts", parts);
+
+            conversationHistory.add(sys);
+
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void showTypingAnimation() {
+        stopTyping = false; // allow animation to run
+
+        new Thread(() -> {
+            String[] dots = {"", ".", "..", "..."};
+
+            int i = 0;
+            while (!stopTyping) {
+                int index = i % dots.length;
+                String text = "Typing" + dots[index];
+
+                requireActivity().runOnUiThread(() -> assistantResponse.setText(text));
+
+                i++;
+                try {
+                    Thread.sleep(300);
+                } catch (InterruptedException ignored) {
+                }
+            }
+        }).start();
     }
 
 
@@ -147,9 +203,12 @@ public class AIAssistantFragment extends Fragment {
 
             @Override
             public void onFailure(Call call, IOException e) {
-                requireActivity().runOnUiThread(() ->
-                        assistantResponse.setText("Network error: " + e.getMessage()));
+                requireActivity().runOnUiThread(() -> {
+                    stopTyping = true;
+                    assistantResponse.setText("Network error: " + e.getMessage());
+                });
             }
+
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
@@ -158,6 +217,7 @@ public class AIAssistantFragment extends Fragment {
                 String reply = parseReply(json);
 
                 requireActivity().runOnUiThread(() -> {
+                    stopTyping = true;
                     assistantResponse.setText(reply);
                 });
 
@@ -181,7 +241,8 @@ public class AIAssistantFragment extends Fragment {
 
             conversationHistory.add(modelObj);
 
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) {
+        }
     }
 
 
@@ -189,13 +250,24 @@ public class AIAssistantFragment extends Fragment {
         try {
             JSONObject obj = new JSONObject(json);
 
+            if (!obj.has("candidates")) {
+                return "Error: Model did not return a valid response.";
+            }
+
             JSONArray candidates = obj.getJSONArray("candidates");
+            if (candidates.length() == 0) {
+                return "Error: Empty response from model.";
+            }
+
             JSONObject content = candidates.getJSONObject(0).getJSONObject("content");
             JSONArray parts = content.getJSONArray("parts");
+
             return parts.getJSONObject(0).getString("text");
 
         } catch (Exception e) {
-            return "Parsing error: " + e.getMessage() + "\nRAW:\n" + json;
+            // Simple, clean error
+            return "Something went wrong. Please try again.";
         }
     }
+
 }

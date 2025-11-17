@@ -12,12 +12,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end"
-        android:layout_marginBottom="20dp"
+        android:layout_marginBottom="12dp"
         android:background="@drawable/bubble_user"
-        android:padding="12dp"
+        android:padding="10dp"
         android:text=""
         android:textColor="#FFFFFF"
-        android:textSize="15sp"
+        android:textSize="18sp"
         android:visibility="gone" />
 
     <!-- ASSISTANT BUBBLE CONTAINER -->
@@ -25,7 +25,7 @@
         android:id="@+id/assistant_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="28dp"
+        android:layout_marginBottom="18dp"
         android:gravity="start"
         android:orientation="horizontal"
         android:visibility="gone">
@@ -33,10 +33,10 @@
         <!-- Assistant Icon -->
         <ImageView
             android:id="@+id/assistant_icon"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
             android:layout_gravity="center_vertical"
-            android:layout_marginEnd="12dp"
+            android:layout_marginEnd="10dp"
             android:src="@drawable/ic_robot" />
 
         <!-- Assistant Bubble -->
@@ -46,7 +46,8 @@
             android:layout_gravity="center_vertical"
             android:background="@drawable/card_assistant"
             android:orientation="vertical"
-            android:padding="12dp">
+            android:padding="10dp"
+            android:maxWidth="280dp">
 
             <TextView
                 android:id="@+id/assistant_response"
@@ -54,7 +55,7 @@
                 android:layout_height="wrap_content"
                 android:text=""
                 android:textColor="#222222"
-                android:textSize="15sp" />
+                android:textSize="18sp" />
         </LinearLayout>
     </LinearLayout>
 
@@ -83,7 +84,7 @@
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:textColor="#222222"
-            android:textSize="15sp" />
+            android:textSize="16sp" />
 
         <ImageButton
             android:id="@+id/send_button"
