@@ -9,9 +9,12 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.ArrayAdapter;
 import android.widget.AdapterView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -24,6 +27,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.culturalcompass.R;
 import com.example.culturalcompass.model.Attraction;
+import com.example.culturalcompass.model.AttractionClusterItem;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -60,6 +64,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+
+import androidx.appcompat.app.AlertDialog;
+
+import com.google.maps.android.clustering.Cluster;
+import com.google.maps.android.clustering.ClusterManager;
+
 
 public class MapFragment extends Fragment implements OnMapReadyCallback {
 
@@ -107,6 +117,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     // When true => live GPS moves the map & reloads nearby places
     // When false => user is exploring a searched/virtual location
     private boolean followUserLocation = true;
+    private ClusterManager<AttractionClusterItem> clusterManager;
+
 
 
 
@@ -303,28 +315,24 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
-        mMap.setOnMyLocationButtonClickListener(() -> {
-            // User tapped the default My Location button
-            followUserLocation = true;   // start following GPS again
 
-            // 🔹 Clear search bar (back to "search mode")
+        // My location button behavior stays as you had it
+        mMap.setOnMyLocationButtonClickListener(() -> {
+            followUserLocation = true;
+
             if (searchBar != null) {
                 searchBar.setText("");
-                // Optional: ensure hint is visible again
                 searchBar.setHint("Search for a place");
             }
 
-            // Recenter + reload from real location
-            getUserLocation();           // this already moves the camera and calls loadNearbyAttractions()
-
-            // Return true to consume the click (we already handle camera movement)
+            getUserLocation();
             return true;
         });
 
-
-
-
         mMap.getUiSettings().setZoomControlsEnabled(true);
+
+        // 🔹 Initialize clustering
+        initClusterManager();
 
         // Try enabling location now that map is ready
         enableMyLocation();
@@ -339,6 +347,28 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             );
         }
     }
+
+    private void initClusterManager() {
+        if (mMap == null || getContext() == null) return;
+
+        clusterManager = new ClusterManager<>(requireContext(), mMap);
+        clusterManager.setRenderer(
+                new AttractionClusterRenderer(requireContext(), mMap, clusterManager)
+        );
+
+        mMap.setOnCameraIdleListener(clusterManager);
+        mMap.setOnMarkerClickListener(clusterManager);
+        mMap.setOnInfoWindowClickListener(clusterManager);
+
+        // When user taps a cluster
+        clusterManager.setOnClusterClickListener(cluster -> {
+            showClusterNamesDialog(cluster);
+            return true; // we handled it
+        });
+    }
+
+
+
 
     private void setupFilterSpinner() {
 
@@ -665,6 +695,57 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         loadNearbyAttractions(lat, lon, types);
     }
+    private void showClusterNamesDialog(Cluster<AttractionClusterItem> cluster) {
+        if (getContext() == null) return;
+
+        LayoutInflater inflater = LayoutInflater.from(requireContext());
+        View dialogView = inflater.inflate(R.layout.dialog_cluster_places, null);
+        LinearLayout container = dialogView.findViewById(R.id.placesContainer);
+
+        for (AttractionClusterItem item : cluster.getItems()) {
+            Attraction a = item.getAttraction();
+
+            View row = inflater.inflate(R.layout.row_cluster_place, container, false);
+
+            TextView txtPlaceName = row.findViewById(R.id.txtPlaceName);
+            TextView txtPlaceType = row.findViewById(R.id.txtPlaceType);
+            ImageView imgPlaceType = row.findViewById(R.id.imgPlaceType);
+
+            txtPlaceName.setText(a.getName());
+            txtPlaceType.setText(a.getType()); // "Tourist attraction", "Museum", ...
+
+            String typeKey = a.getPrimaryTypeKey(); // "tourist_attraction", "museum", "art_gallery"
+            if (typeKey != null) {
+                switch (typeKey) {
+                    case "museum":
+                        txtPlaceType.setBackgroundResource(R.drawable.chip_museum);
+                        imgPlaceType.setImageResource(R.drawable.ic_museum);
+                        break;
+
+                    case "art_gallery":
+                        txtPlaceType.setBackgroundResource(R.drawable.chip_art_gallery);
+                        imgPlaceType.setImageResource(R.drawable.ic_art_gallery);
+                        break;
+
+                    case "tourist_attraction":
+                    default:
+                        txtPlaceType.setBackgroundResource(R.drawable.chip_attraction);
+                        imgPlaceType.setImageResource(R.drawable.ic_tourist_attraction);
+                        break;
+                }
+            }
+
+            container.addView(row);
+        }
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle(cluster.getSize() + " places here")
+                .setView(dialogView)
+                .setPositiveButton("OK", null)
+                .show();
+    }
+
+
 
     private void applyFiltersAndSorting() {
         if (getActivity() == null || mMap == null) return;
@@ -721,24 +802,21 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
 
 
-        // 3) Update UI: adapter + markers
+         // 3) Update UI: adapter + clustered markers
         getActivity().runOnUiThread(() -> {
-            // update adapter
+            // Update list
             nearbyAdapter.updateItems(filtered);
 
-            // update markers
-            mMap.clear();
-            for (Attraction a : filtered) {
-                BitmapDescriptor icon = getMarkerIcon(a.getPrimaryTypeKey());
+            if (clusterManager == null) return;
 
-                mMap.addMarker(
-                        new MarkerOptions()
-                                .position(new LatLng(a.getLat(), a.getLng()))
-                                .title(a.getName())
-                                .icon(icon)
-                );
+            // Update clustered markers
+            clusterManager.clearItems();
+            for (Attraction a : filtered) {
+                clusterManager.addItem(new AttractionClusterItem(a));
             }
+            clusterManager.cluster(); // redraw clusters
         });
+
     }
     private double computeWeightedRating(Attraction a) {
         Double r = a.getRating();
