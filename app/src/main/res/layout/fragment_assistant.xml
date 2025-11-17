@@ -2,60 +2,63 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="#FAFAFA"
+    android:orientation="vertical"
     android:padding="16dp">
 
-    <!-- User Question -->
+    <!-- USER BUBBLE -->
     <TextView
         android:id="@+id/user_question"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@drawable/bubble_user"
-        android:text="Why was the Acropolis built?"
-        android:textColor="#FFFFFF"
-        android:padding="12dp"
-        android:textSize="15sp"
         android:layout_gravity="end"
-        android:layout_marginBottom="20dp" />
+        android:layout_marginBottom="20dp"
+        android:background="@drawable/bubble_user"
+        android:padding="12dp"
+        android:text=""
+        android:textColor="#FFFFFF"
+        android:textSize="15sp"
+        android:visibility="gone" />
 
-    <!-- Assistant Response Container -->
+    <!-- ASSISTANT BUBBLE CONTAINER -->
     <LinearLayout
+        android:id="@+id/assistant_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:layout_marginBottom="28dp"
         android:gravity="start"
-        android:layout_marginBottom="28dp">
+        android:orientation="horizontal"
+        android:visibility="gone">
 
         <!-- Assistant Icon -->
         <ImageView
             android:id="@+id/assistant_icon"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:src="@drawable/ic_robot"
             android:layout_gravity="center_vertical"
-            android:layout_marginEnd="12dp" />
+            android:layout_marginEnd="12dp"
+            android:src="@drawable/ic_robot" />
 
-        <!-- Assistant Response Card -->
+        <!-- Assistant Bubble -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
+            android:layout_gravity="center_vertical"
             android:background="@drawable/card_assistant"
-            android:padding="12dp"
-            android:layout_gravity="center_vertical">
+            android:orientation="vertical"
+            android:padding="12dp">
 
             <TextView
                 android:id="@+id/assistant_response"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="The Acropolis was built in the 5th century BC ..."
+                android:text=""
                 android:textColor="#222222"
                 android:textSize="15sp" />
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Spacer/Stretch -->
+    <!-- Spacer -->
     <View
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -65,9 +68,9 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:layout_marginBottom="12dp"
         android:gravity="center_vertical"
-        android:layout_marginBottom="12dp">
+        android:orientation="horizontal">
 
         <EditText
             android:id="@+id/input_message"
@@ -76,19 +79,20 @@
             android:layout_weight="1"
             android:background="@drawable/rounded_input_text"
             android:hint="Ask me anything..."
+            android:inputType="text"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
-            android:textSize="15sp"
             android:textColor="#222222"
-            android:inputType="text" />
+            android:textSize="15sp" />
 
         <ImageButton
             android:id="@+id/send_button"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="@null"
-            android:src="@drawable/ic_send"
             android:contentDescription="Send"
+            android:src="@drawable/ic_send"
             app:tint="#2196F3" />
     </LinearLayout>
+
 </LinearLayout>
