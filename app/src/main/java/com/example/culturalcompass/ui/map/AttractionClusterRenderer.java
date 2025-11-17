@@ -4,9 +4,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-
 import androidx.core.content.ContextCompat;
-
 import com.example.culturalcompass.R;
 import com.example.culturalcompass.model.AttractionClusterItem;
 import com.google.android.gms.maps.GoogleMap;
@@ -42,7 +40,6 @@ public class AttractionClusterRenderer
         markerOptions.icon(icon).title(item.getTitle());
     }
 
-    // Optional: customize cluster icon if you want later
     @Override
     protected boolean shouldRenderAsCluster(Cluster<AttractionClusterItem> cluster) {
         // Cluster when 2 or more items overlap

@@ -1,9 +1,6 @@
 package com.example.culturalcompass.model;
 
-
 import androidx.annotation.Nullable;
-
-import com.example.culturalcompass.model.Attraction;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.clustering.ClusterItem;
 
@@ -18,8 +15,7 @@ public class AttractionClusterItem implements ClusterItem {
         this.attraction = attraction;
         this.position = new LatLng(attraction.getLat(), attraction.getLng());
         this.title = attraction.getName();
-        // You can show type or distance here
-        this.snippet = attraction.getType(); // e.g. "Museum", "Art gallery"
+        this.snippet = attraction.getType();
     }
 
     @Override

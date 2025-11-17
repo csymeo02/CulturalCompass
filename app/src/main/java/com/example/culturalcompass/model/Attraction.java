@@ -1,5 +1,4 @@
 package com.example.culturalcompass.model;
-import com.google.android.libraries.places.api.model.PhotoMetadata;
 
 import com.google.android.libraries.places.api.model.PhotoMetadata;
 
@@ -9,7 +8,7 @@ public class Attraction {
     private double lng;
     private double distanceMeters;
     private String typeLabel;
-    private String primaryTypeKey; // "museum", "art_gallery", "tourist_attraction"
+    private String primaryTypeKey;
     private Double rating;
     private Integer ratingCount;
     private boolean favorite;
@@ -51,5 +50,3 @@ public class Attraction {
 
     public PhotoMetadata getPhotoMetadata() { return photoMetadata; }
 }
-
-

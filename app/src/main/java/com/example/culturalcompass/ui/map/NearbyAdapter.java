@@ -7,13 +7,10 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RatingBar;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.example.culturalcompass.R;
 import com.example.culturalcompass.model.Attraction;
-
 import java.util.List;
 import java.util.Locale;
 import com.google.android.libraries.places.api.net.PlacesClient;
@@ -49,12 +46,11 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Attraction a = items.get(position);
 
-        // --- Name & type ---
+
         holder.txtName.setText(a.getName());
         holder.txtType.setText(a.getType());
 
-        // --- Type chip background ---
-        String typeKey = a.getPrimaryTypeKey(); // IMPORTANT: use primaryTypeKey, not label
+        String typeKey = a.getPrimaryTypeKey();
 
         if (typeKey != null) {
             switch (typeKey) {
@@ -75,9 +71,9 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
                     break;
 
                 default:
-                    // fallback: treat as Art Gallery style
-                    holder.txtType.setBackgroundResource(R.drawable.chip_art_gallery);
-                    holder.txtType.setTextColor(0xFF000000);
+                    // fallback: treat as Chip attraction
+                    holder.txtType.setBackgroundResource(R.drawable.chip_attraction);
+                    holder.txtType.setTextColor(0xFF1F6B1F);
                     break;
             }
         }
@@ -92,7 +88,7 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
         }
         holder.txtDistance.setText(distanceText);
 
-// --- Rating chip (4,4 ★★★★☆ (88)) or "No ratings yet" ---
+        // --- Rating chip (4,4 ★★★★☆ (88)) or "No ratings yet" ---
         Double rating = a.getRating();
         Integer ratingCount = a.getRatingCount();
 
@@ -150,8 +146,6 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
         });
     }
 
-
-
     private void updateHeartIcon(ViewHolder holder, boolean favorite) {
         if (favorite) {
             holder.imgFavorite.setImageResource(R.drawable.ic_heart_filled);
@@ -194,4 +188,3 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
 
     }
 }
-

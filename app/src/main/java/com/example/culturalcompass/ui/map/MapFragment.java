@@ -1,25 +1,28 @@
 package com.example.culturalcompass.ui.map;
 
+import static com.example.culturalcompass.R.id.placesContainer;
+
 import android.Manifest;
+import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
-import android.widget.ArrayAdapter;
-import android.widget.AdapterView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -28,6 +31,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.culturalcompass.R;
 import com.example.culturalcompass.model.Attraction;
 import com.example.culturalcompass.model.AttractionClusterItem;
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -37,27 +41,18 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.model.BitmapDescriptor;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
-
-// Places SDK (New)
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.CircularBounds;
 import com.google.android.libraries.places.api.model.PhotoMetadata;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.android.libraries.places.api.net.SearchNearbyRequest;
-import android.app.Activity;
-import android.content.Intent;
-import android.widget.EditText;
-
-import com.google.android.gms.common.api.Status;
 import com.google.android.libraries.places.widget.Autocomplete;
 import com.google.android.libraries.places.widget.AutocompleteActivity;
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
-
+import com.google.maps.android.clustering.Cluster;
+import com.google.maps.android.clustering.ClusterManager;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -65,13 +60,17 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import androidx.appcompat.app.AlertDialog;
-
-import com.google.maps.android.clustering.Cluster;
-import com.google.maps.android.clustering.ClusterManager;
-
-
+/**
+ * Map screen that:
+ * - Tracks live GPS or a searched location
+ * - Loads nearby cultural places via Places Nearby Search
+ * - Filters by type (tourist attraction / museum / art gallery)
+ * - Sorts by distance, rating, or best overall
+ * - Shows clustered markers on Google Maps
+ */
 public class MapFragment extends Fragment implements OnMapReadyCallback {
+
+    private static final float MIN_DISTANCE_CHANGE = 100f; // meters
 
     private MapView mapView;
     private GoogleMap mMap;
@@ -81,55 +80,50 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private double userLat;
     private double userLon;
 
-    private RecyclerView recyclerNearby;
-    private LocationCallback locationCallback;
-    private LocationRequest locationRequest;
-    private NearbyAdapter nearbyAdapter;
-
-
-    // To avoid too many API calls:
-    private static final float MIN_DISTANCE_CHANGE = 100f; // meters
     private double lastFetchLat = 0;
     private double lastFetchLon = 0;
 
+    private RecyclerView recyclerNearby;
+    private NearbyAdapter nearbyAdapter;
 
-    // master list from Places
-    private final List<Attraction> allAttractions = new ArrayList<>();
+    private LocationCallback locationCallback;
+    private LocationRequest locationRequest;
 
     private Spinner spinnerFilter;
     private Spinner spinnerSort;
     private EditText searchBar;
 
-
-
-
-    // filter state
+    // Filter state
     private boolean filterTouristAttraction = true;
     private boolean filterMuseum = true;
     private boolean filterArtGallery = true;
 
-    private enum SortMode { DISTANCE, RATING,BEST }
+    private enum SortMode {
+        DISTANCE,
+        RATING,
+        BEST
+    }
+
     private SortMode currentSortMode = SortMode.DISTANCE;
 
     private ActivityResultLauncher<String> requestPermissionLauncher;
     private ActivityResultLauncher<Intent> autocompleteLauncher;
 
-    // When true => live GPS moves the map & reloads nearby places
-    // When false => user is exploring a searched/virtual location
+    // true = follow live GPS; false = user is exploring a searched location
     private boolean followUserLocation = true;
+
+    // Master list from latest Places response
+    private final List<Attraction> allAttractions = new ArrayList<>();
+
     private ClusterManager<AttractionClusterItem> clusterManager;
 
-
-
-
-    public MapFragment() {}
+    public MapFragment() {
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-
-        // --- 1) Initialize Places SDK (New) once ---
         if (!Places.isInitialized()) {
             Places.initializeWithNewPlacesApiEnabled(
                     requireContext().getApplicationContext(),
@@ -138,22 +132,19 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
         placesClient = Places.createClient(requireContext());
 
-        // --- 2) Location client ---
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
 
-        // Continuous location updates (every 5s, at least 10m movement)
         locationRequest = new LocationRequest.Builder(
                 LocationRequest.PRIORITY_HIGH_ACCURACY,
-                5000 // 5 seconds
+                5000
         )
                 .setMinUpdateDistanceMeters(10)
                 .build();
 
-        // Continuous location listener
+        // Receives continuous GPS updates and triggers nearby fetch when user moves enough
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
-                // Ignore GPS updates while user is exploring a searched place
                 if (!followUserLocation) {
                     return;
                 }
@@ -167,7 +158,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 userLat = newLat;
                 userLon = newLon;
 
-                // Calculate how far the user moved since last Places fetch
                 float[] dist = new float[1];
                 android.location.Location.distanceBetween(
                         lastFetchLat, lastFetchLon,
@@ -175,26 +165,22 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         dist
                 );
 
-                if (dist[0] > MIN_DISTANCE_CHANGE) { // moved more than 100m?
-
+                if (dist[0] > MIN_DISTANCE_CHANGE) {
                     lastFetchLat = newLat;
                     lastFetchLon = newLon;
 
-                    // Call Nearby Search (New)
                     requestNearbyForCurrentFilter(newLat, newLon);
 
-                    // Move camera smoothly
                     if (mMap != null) {
                         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
-                                new LatLng(newLat, newLon), 16f
+                                new LatLng(newLat, newLon),
+                                16f
                         ));
                     }
                 }
             }
         };
 
-
-        // Runtime permission request launcher
         requestPermissionLauncher =
                 registerForActivityResult(
                         new ActivityResultContracts.RequestPermission(),
@@ -202,9 +188,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                             if (isGranted) {
                                 enableMyLocation();
                             } else {
-                                Toast.makeText(requireContext(),
+                                Toast.makeText(
+                                        requireContext(),
                                         "Precise location permission is required",
-                                        Toast.LENGTH_SHORT).show();
+                                        Toast.LENGTH_SHORT
+                                ).show();
                             }
                         }
                 );
@@ -215,6 +203,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         result -> {
                             int code = result.getResultCode();
                             Intent data = result.getData();
+
                             if (code == Activity.RESULT_OK && data != null) {
                                 Place place = Autocomplete.getPlaceFromIntent(data);
                                 onPlaceSelected(place);
@@ -228,18 +217,19 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                             }
                         }
                 );
-
     }
 
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-
+    public View onCreateView(
+            @NonNull LayoutInflater inflater,
+            ViewGroup container,
+            Bundle savedInstanceState
+    ) {
         View view = inflater.inflate(R.layout.fragment_map, container, false);
+
         searchBar = view.findViewById(R.id.searchBar);
         searchBar.setFocusable(false);
         searchBar.setOnClickListener(v -> openSearchAutocomplete());
-
 
         mapView = view.findViewById(R.id.map);
         mapView.onCreate(savedInstanceState);
@@ -250,11 +240,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         nearbyAdapter = new NearbyAdapter(new ArrayList<>(), placesClient);
         recyclerNearby.setAdapter(nearbyAdapter);
 
-        // --- Spinners ---
         spinnerFilter = view.findViewById(R.id.spinnerFilter);
-        spinnerSort   = view.findViewById(R.id.spinnerSort);
+        spinnerSort = view.findViewById(R.id.spinnerSort);
 
-        // initial state
         filterTouristAttraction = true;
         filterMuseum = true;
         filterArtGallery = true;
@@ -265,6 +253,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         return view;
     }
+
     private void openSearchAutocomplete() {
         List<Place.Field> fields = Arrays.asList(
                 Place.Field.ID,
@@ -284,10 +273,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         LatLng latLng = place.getLocation();
         if (latLng == null) return;
 
-        // Stop following live GPS, we are exploring a manual/search location
         followUserLocation = false;
 
-        // 🔹 Show where the user is exploring (place name)
         if (searchBar != null) {
             String name = place.getDisplayName();
             if (name != null) {
@@ -295,28 +282,22 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             }
         }
 
-        // Set virtual location
         userLat = latLng.latitude;
         userLon = latLng.longitude;
         lastFetchLat = userLat;
         lastFetchLon = userLon;
 
-        // Move camera
         if (mMap != null) {
             mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f));
         }
 
-        // Load nearby attractions around this searched point
         requestNearbyForCurrentFilter(userLat, userLon);
     }
-
-
 
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
 
-        // My location button behavior stays as you had it
         mMap.setOnMyLocationButtonClickListener(() -> {
             followUserLocation = true;
 
@@ -331,14 +312,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         mMap.getUiSettings().setZoomControlsEnabled(true);
 
-        // 🔹 Initialize clustering
         initClusterManager();
-
-        // Try enabling location now that map is ready
         enableMyLocation();
 
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED) {
 
             fusedLocationClient.requestLocationUpdates(
                     locationRequest,
@@ -360,20 +340,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         mMap.setOnMarkerClickListener(clusterManager);
         mMap.setOnInfoWindowClickListener(clusterManager);
 
-        // When user taps a cluster
         clusterManager.setOnClusterClickListener(cluster -> {
             showClusterNamesDialog(cluster);
-            return true; // we handled it
+            return true;
         });
     }
 
-
-
-
     private void setupFilterSpinner() {
-
-        // Options shown to the user
-        String[] filterOptions = new String[] {
+        String[] filterOptions = new String[]{
                 "All types",
                 "Tourist attractions",
                 "Museums",
@@ -386,60 +360,58 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 filterOptions
         );
         adapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
-
         spinnerFilter.setAdapter(adapter);
 
         spinnerFilter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                // Update filter booleans depending on selection
+            public void onItemSelected(
+                    AdapterView<?> parent,
+                    View view,
+                    int position,
+                    long id
+            ) {
                 switch (position) {
-                    case 0: // All types
+                    case 0:
                         filterTouristAttraction = true;
                         filterMuseum = true;
                         filterArtGallery = true;
                         break;
-                    case 1: // Tourist attractions only
+                    case 1:
                         filterTouristAttraction = true;
                         filterMuseum = false;
                         filterArtGallery = false;
                         break;
-                    case 2: // Museums only
+                    case 2:
                         filterTouristAttraction = false;
                         filterMuseum = true;
                         filterArtGallery = false;
                         break;
-                    case 3: // Art galleries only
+                    case 3:
                         filterTouristAttraction = false;
                         filterMuseum = false;
                         filterArtGallery = true;
                         break;
                 }
 
-                // After updating filter flags, fetch new data if we already know a center
                 if (lastFetchLat != 0 || lastFetchLon != 0) {
-                    // New API request depending on filter (more results of that type)
                     requestNearbyForCurrentFilter(lastFetchLat, lastFetchLon);
                 } else {
-                    // No location yet, just apply filters to whatever we have (likely empty)
                     applyFiltersAndSorting();
                 }
-
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
-                // do nothing
+                // no-op
             }
         });
     }
 
     private void setupSortSpinner() {
-        String[] sortOptions = new String[] {
+        String[] sortOptions = new String[]{
                 "Distance",
                 "Rating",
                 "Best overall"
-
         };
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
@@ -452,7 +424,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         spinnerSort.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+            public void onItemSelected(
+                    AdapterView<?> parent,
+                    View view,
+                    int position,
+                    long id
+            ) {
                 switch (position) {
                     case 0:
                         currentSortMode = SortMode.DISTANCE;
@@ -468,88 +445,74 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> parent) { }
+            public void onNothingSelected(AdapterView<?> parent) {
+                // no-op
+            }
         });
 
-// default selection: Distance
         spinnerSort.setSelection(0);
-
     }
-
 
     private void enableMyLocation() {
         if (mMap == null) return;
 
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED) {
 
-            mMap.setMyLocationEnabled(true);  // SHOW BLUE DOT
-            getUserLocation();                // Get coordinates + first camera move
-
+            mMap.setMyLocationEnabled(true);
+            getUserLocation();
         } else {
             requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
         }
     }
-    private double computeCombinedScore(Attraction a) {
-        // 1) Rating component
-        double weightedRating = computeWeightedRating(a); // 0..5-ish
-        if (weightedRating < 0) {
-            // no rating -> treat as very low rating
-            weightedRating = 0.0;
-        }
-
-        // 2) Distance penalty (in km)
-        double distanceKm = a.getDistanceMeters() / 1000.0;
-
-        // Each extra km subtracts a bit from the score.
-        // Tune 0.15 as you like: higher = distance more important.
-        double penalty = 0.15 * distanceKm;
-
-        return weightedRating - penalty;
-    }
-
 
     private void getUserLocation() {
         fusedLocationClient.getLastLocation()
                 .addOnSuccessListener(location -> {
                     if (location != null) {
-
                         userLat = location.getLatitude();
                         userLon = location.getLongitude();
 
-                        // for first fetch threshold
                         lastFetchLat = userLat;
                         lastFetchLon = userLon;
 
                         LatLng userPosition = new LatLng(userLat, userLon);
 
-                        // First Nearby Search
                         requestNearbyForCurrentFilter(userLat, userLon);
 
                         if (mMap != null) {
-                            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(userPosition, 16f));
+                            mMap.animateCamera(
+                                    CameraUpdateFactory.newLatLngZoom(userPosition, 16f)
+                            );
                         }
-
                     } else {
-                        Toast.makeText(requireContext(),
+                        Toast.makeText(
+                                requireContext(),
                                 "Could not get current location",
-                                Toast.LENGTH_SHORT).show();
+                                Toast.LENGTH_SHORT
+                        ).show();
                     }
                 })
                 .addOnFailureListener(e ->
-                        Toast.makeText(requireContext(),
+                        Toast.makeText(
+                                requireContext(),
                                 "Error getting location",
-                                Toast.LENGTH_SHORT).show()
+                                Toast.LENGTH_SHORT
+                        ).show()
                 );
     }
 
     /**
-     * Uses Places SDK for Android (New) Nearby Search to get nearby cultural places.
+     * Performs a Nearby Search using the Places SDK and converts results to Attraction objects.
      */
-    private void loadNearbyAttractions(double lat, double lon, List<String> includedTypes) {
-
-        // 1) Define which fields we want back for each Place
-        final List<Place.Field> placeFields = Arrays.asList(
+    private void loadNearbyAttractions(
+            double lat,
+            double lon,
+            List<String> includedTypes
+    ) {
+        List<Place.Field> placeFields = Arrays.asList(
                 Place.Field.ID,
                 Place.Field.DISPLAY_NAME,
                 Place.Field.LOCATION,
@@ -560,12 +523,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 Place.Field.PHOTO_METADATAS
         );
 
-        // 2) Define circular search area (5km radius)
         LatLng center = new LatLng(lat, lon);
-        CircularBounds circle = CircularBounds.newInstance(center, /* radius = */ 5000);
+        CircularBounds circle = CircularBounds.newInstance(center, 5000);
 
-
-        // 5) Build Nearby Search request
         SearchNearbyRequest request =
                 SearchNearbyRequest.builder(circle, placeFields)
                         .setIncludedTypes(includedTypes)
@@ -573,12 +533,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         .setRankPreference(SearchNearbyRequest.RankPreference.DISTANCE)
                         .build();
 
-
-
-        // 6) Call PlacesClient
         placesClient.searchNearby(request)
                 .addOnSuccessListener(response -> {
-
                     List<Place> places = response.getPlaces();
                     List<Attraction> attractions = new ArrayList<>();
 
@@ -586,7 +542,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         LatLng placeLoc = place.getLocation();
                         if (placeLoc == null) continue;
 
-                        // distance from user
                         float[] dist = new float[1];
                         android.location.Location.distanceBetween(
                                 userLat, userLon,
@@ -600,22 +555,20 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                             name = "Unknown place";
                         }
 
-                        String primaryTypeKey = place.getPrimaryType(); // "museum", "art_gallery", "tourist_attraction"
-
-                        // Label, e.g. "Museum"
+                        String primaryTypeKey = place.getPrimaryType();
                         String typeLabel = place.getPrimaryTypeDisplayName();
                         if (typeLabel == null || typeLabel.isEmpty()) {
                             typeLabel = primaryTypeKey;
                         }
 
                         PhotoMetadata photoMetadata = null;
-                        if (place.getPhotoMetadatas() != null && !place.getPhotoMetadatas().isEmpty()) {
+                        if (place.getPhotoMetadatas() != null &&
+                                !place.getPhotoMetadatas().isEmpty()) {
                             photoMetadata = place.getPhotoMetadatas().get(0);
                         }
 
-
-                        Double rating = place.getRating();              // can be null
-                        Integer ratingCount = place.getUserRatingCount(); // can be null
+                        Double rating = place.getRating();
+                        Integer ratingCount = place.getUserRatingCount();
 
                         attractions.add(
                                 new Attraction(
@@ -630,16 +583,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                                         photoMetadata
                                 )
                         );
-
                     }
 
-                    // Sort by distance just in case
                     Collections.sort(
                             attractions,
                             Comparator.comparingDouble(Attraction::getDistanceMeters)
                     );
 
-                    // Keep only top 20 by distance (optional pre-limit)
                     List<Attraction> top20 =
                             attractions.subList(0, Math.min(20, attractions.size()));
 
@@ -661,46 +611,38 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         ).show();
                     }
                 });
-
     }
 
+    /**
+     * Chooses which place types to request, based on the current filter flags.
+     */
     private void requestNearbyForCurrentFilter(double lat, double lon) {
         List<String> types;
 
-        // Spinner states:
-        // 0: All types -> all three true
-        // 1: Tourist attractions -> only that true
-        // 2: Museums -> only that true
-        // 3: Art galleries -> only that true
-
         if (filterTouristAttraction && filterMuseum && filterArtGallery) {
-            // All types
             types = Arrays.asList("tourist_attraction", "museum", "art_gallery");
-
         } else if (filterTouristAttraction && !filterMuseum && !filterArtGallery) {
-            // Tourist attractions only
             types = Arrays.asList("tourist_attraction");
-
         } else if (!filterTouristAttraction && filterMuseum && !filterArtGallery) {
-            // Museums only
             types = Arrays.asList("museum");
-
         } else if (!filterTouristAttraction && !filterMuseum && filterArtGallery) {
-            // Art galleries only
             types = Arrays.asList("art_gallery");
-
         } else {
             types = Arrays.asList("tourist_attraction", "museum", "art_gallery");
         }
 
         loadNearbyAttractions(lat, lon, types);
     }
+
+    /**
+     * When a cluster is tapped, show a dialog listing all places inside that cluster.
+     */
     private void showClusterNamesDialog(Cluster<AttractionClusterItem> cluster) {
         if (getContext() == null) return;
 
         LayoutInflater inflater = LayoutInflater.from(requireContext());
         View dialogView = inflater.inflate(R.layout.dialog_cluster_places, null);
-        LinearLayout container = dialogView.findViewById(R.id.placesContainer);
+        LinearLayout container = dialogView.findViewById(placesContainer);
 
         for (AttractionClusterItem item : cluster.getItems()) {
             Attraction a = item.getAttraction();
@@ -712,21 +654,19 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             ImageView imgPlaceType = row.findViewById(R.id.imgPlaceType);
 
             txtPlaceName.setText(a.getName());
-            txtPlaceType.setText(a.getType()); // "Tourist attraction", "Museum", ...
+            txtPlaceType.setText(a.getType());
 
-            String typeKey = a.getPrimaryTypeKey(); // "tourist_attraction", "museum", "art_gallery"
+            String typeKey = a.getPrimaryTypeKey();
             if (typeKey != null) {
                 switch (typeKey) {
                     case "museum":
                         txtPlaceType.setBackgroundResource(R.drawable.chip_museum);
                         imgPlaceType.setImageResource(R.drawable.ic_museum);
                         break;
-
                     case "art_gallery":
                         txtPlaceType.setBackgroundResource(R.drawable.chip_art_gallery);
                         imgPlaceType.setImageResource(R.drawable.ic_art_gallery);
                         break;
-
                     case "tourist_attraction":
                     default:
                         txtPlaceType.setBackgroundResource(R.drawable.chip_attraction);
@@ -745,12 +685,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 .show();
     }
 
-
-
+    /**
+     * Applies type filters and selected sorting mode, then updates list and map clusters.
+     */
     private void applyFiltersAndSorting() {
         if (getActivity() == null || mMap == null) return;
 
-        // 1) Filter by type
         List<Attraction> filtered = new ArrayList<>();
 
         for (Attraction a : allAttractions) {
@@ -774,120 +714,90 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             }
         }
 
-        // If all filters off, show nothing (or you could decide to show all)
-        // 2) Sort
         if (currentSortMode == SortMode.DISTANCE) {
-
-            Collections.sort(filtered,
-                    Comparator.comparingDouble(Attraction::getDistanceMeters));
-
+            Collections.sort(
+                    filtered,
+                    Comparator.comparingDouble(Attraction::getDistanceMeters)
+            );
         } else if (currentSortMode == SortMode.RATING) {
-
-            // Sort by weighted rating (rating + number of reviews), desc
             Collections.sort(filtered, (a, b) -> {
                 double sa = computeWeightedRating(a);
                 double sb = computeWeightedRating(b);
-                return Double.compare(sb, sa); // descending
+                return Double.compare(sb, sa);
             });
-
         } else if (currentSortMode == SortMode.BEST) {
-
-            // Combined score: rating & distance
             Collections.sort(filtered, (a, b) -> {
                 double sa = computeCombinedScore(a);
                 double sb = computeCombinedScore(b);
-                return Double.compare(sb, sa); // descending
+                return Double.compare(sb, sa);
             });
         }
 
-
-
-         // 3) Update UI: adapter + clustered markers
         getActivity().runOnUiThread(() -> {
-            // Update list
             nearbyAdapter.updateItems(filtered);
 
             if (clusterManager == null) return;
 
-            // Update clustered markers
             clusterManager.clearItems();
             for (Attraction a : filtered) {
                 clusterManager.addItem(new AttractionClusterItem(a));
             }
-            clusterManager.cluster(); // redraw clusters
+            clusterManager.cluster();
         });
-
     }
+
+    /**
+     * Wilson score rating that favors places with more reviews.
+     */
     private double computeWeightedRating(Attraction a) {
         Double r = a.getRating();
         Integer v = a.getRatingCount();
 
         if (r == null || v == null || v == 0) {
-            // No rating or no votes -> treat as very low score
             return -1.0;
         }
 
-        double rating = r;      // 1..5
-        double n = v;           // number of reviews
-        double z = 1.96;        // 95% confidence
+        double rating = r;
+        double n = v;
+        double z = 1.96;
 
-        // 1) Convert to 0..1
         double p = rating / 5.0;
-
         double z2 = z * z;
 
-        // 2) Wilson lower bound in 0..1
         double numerator = p + z2 / (2.0 * n)
                 - z * Math.sqrt((p * (1.0 - p) + z2 / (4.0 * n)) / n);
         double denominator = 1.0 + z2 / n;
 
         double lowerBound = numerator / denominator;
-
-        // 3) Convert back to 0..5 scale
         return lowerBound * 5.0;
     }
 
-    private BitmapDescriptor getMarkerIcon(String primaryTypeKey) {
-
-        int iconRes;
-
-        switch (primaryTypeKey) {
-            case "tourist_attraction":
-                iconRes = R.drawable.ic_tourist_attraction;
-                break;
-
-            case "museum":
-                iconRes = R.drawable.ic_museum;
-                break;
-
-            case "art_gallery":
-                iconRes = R.drawable.ic_art_gallery;
-                break;
-
-            default:
-                iconRes = R.drawable.ic_tourist_attraction; // fallback or generic
-                break;
+    /**
+     * Combined score for "Best overall": high rating, penalized by distance.
+     */
+    private double computeCombinedScore(Attraction a) {
+        double weightedRating = computeWeightedRating(a);
+        if (weightedRating < 0) {
+            weightedRating = 0.0;
         }
 
-        // Convert drawable to bitmap and scale it nice & small
-        Drawable drawable = ContextCompat.getDrawable(requireContext(), iconRes);
-        if (drawable == null) return null;
+        double distanceKm = a.getDistanceMeters() / 1000.0;
+        double penalty = 0.15 * distanceKm;
 
-        Bitmap bitmap = ((BitmapDrawable) drawable).getBitmap();
-        Bitmap scaled = Bitmap.createScaledBitmap(bitmap, 120, 120, false);
-
-        return BitmapDescriptorFactory.fromBitmap(scaled);
+        return weightedRating - penalty;
     }
 
+    // Lifecycle
 
-    // --- Lifecycle ---
     @Override
     public void onResume() {
         super.onResume();
         mapView.onResume();
 
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED) {
 
             fusedLocationClient.requestLocationUpdates(
                     locationRequest,
