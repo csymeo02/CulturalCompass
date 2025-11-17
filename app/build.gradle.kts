@@ -47,4 +47,8 @@ dependencies {
     implementation(libs.android.maps.utils)
     implementation (libs.places)
     implementation("androidx.core:core-splashscreen:1.0.1")
+
+    implementation(libs.okhttp)
+    implementation(libs.logging.interceptor)
+
 }
