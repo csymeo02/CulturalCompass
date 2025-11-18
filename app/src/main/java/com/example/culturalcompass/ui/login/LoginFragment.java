@@ -12,9 +12,11 @@ import androidx.fragment.app.Fragment;
 
 import com.example.culturalcompass.MainActivity;
 import com.example.culturalcompass.R;
+import com.example.culturalcompass.model.Session;
 import com.example.culturalcompass.ui.map.MapFragment;
 import com.example.culturalcompass.ui.register.RegisterFragment;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.example.culturalcompass.model.User;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -85,6 +87,8 @@ public class LoginFragment extends Fragment {
                     String storedHash = doc.getString("passwordHash");
 
                     if (storedHash != null && storedHash.equals(hash)) {
+                        User user = doc.toObject(User.class);
+                        Session.currentUser = user;
 
                         ((MainActivity) requireActivity()).navigateToHome();
 
