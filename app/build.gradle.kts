@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -50,5 +51,13 @@ dependencies {
 
     implementation(libs.okhttp)
     implementation(libs.logging.interceptor)
+    //  Firebase (Lab07)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.storage)
+    implementation(libs.firebase.messaging)
+    implementation(libs.firebase.inappmessaging)
+
 
 }

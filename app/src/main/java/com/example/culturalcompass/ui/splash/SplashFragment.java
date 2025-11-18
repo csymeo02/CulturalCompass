@@ -15,6 +15,7 @@ import androidx.fragment.app.Fragment;
 
 import com.example.culturalcompass.MainActivity;
 import com.example.culturalcompass.R;
+import com.example.culturalcompass.ui.login.LoginFragment;
 import com.example.culturalcompass.ui.map.MapFragment;
 
 public class SplashFragment extends Fragment {
@@ -97,7 +98,7 @@ public class SplashFragment extends Fragment {
 
         act.getSupportFragmentManager().beginTransaction()
                 .setCustomAnimations(0, 0)
-                .replace(R.id.flFragment, new MapFragment())
+                .replace(R.id.flFragment, new LoginFragment())
                 .commitAllowingStateLoss();
     }
 

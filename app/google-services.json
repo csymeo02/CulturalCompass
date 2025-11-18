@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "588327445428",
+    "project_id": "culturalcompass-f870e",
+    "storage_bucket": "culturalcompass-f870e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:588327445428:android:79969e2adaabd4c4ac48e1",
+        "android_client_info": {
+          "package_name": "com.example.culturalcompass"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDjXBB7d_oLDSpRaQrsyhnDPR6mVczdj_Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

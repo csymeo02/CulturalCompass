@@ -8,9 +8,11 @@ import android.view.View;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
+import com.example.culturalcompass.ui.login.LoginFragment;
 import com.example.culturalcompass.ui.map.MapFragment;
 import com.example.culturalcompass.ui.favorites.FavoritesFragment;
 import com.example.culturalcompass.ui.assistant.AIAssistantFragment;
+import com.example.culturalcompass.ui.register.RegisterFragment;
 import com.example.culturalcompass.ui.splash.SplashFragment;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
@@ -80,4 +82,27 @@ public class MainActivity extends AppCompatActivity {
         handler.postDelayed(() -> showChrome(), 200);
 
     }
+
+    public void navigateToLogin() {
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.flFragment, new LoginFragment())
+                .commit();
+    }
+
+    public void navigateToRegister() {
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.flFragment, new RegisterFragment())
+                .addToBackStack(null)
+                .commit();
+    }
+
+    public void navigateToHome() {
+        // show bottom nav again
+        exitSplash();
+
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.flFragment, new MapFragment())
+                .commit();
+    }
+
 }
