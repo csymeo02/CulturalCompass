@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -37,6 +38,8 @@ public class RegisterFragment extends Fragment {
     private EditText etName, etSurname, etEmail, etPassword, etConfirmPassword, etBirthday;
     private Button btnRegister;
 
+    private TextView tvGoLogin;
+
     private FirebaseFirestore db;
     private DatePickerDialog datePickerDialog;
     private SimpleDateFormat dateFormat;
@@ -63,9 +66,20 @@ public class RegisterFragment extends Fragment {
         etBirthday = view.findViewById(R.id.etBirthday);
         btnRegister = view.findViewById(R.id.btnRegister);
 
+        tvGoLogin = view.findViewById(R.id.tvGoLogin);
+
+
         // ---------- DATE PICKER ----------
         initDatePicker();
         etBirthday.setOnClickListener(v -> datePickerDialog.show());
+
+        // ---------- REDIRECT TO LOGIN ----------
+        tvGoLogin.setOnClickListener(v -> {
+            ((MainActivity) requireActivity()).getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.flFragment, new LoginFragment())
+                    .commit();
+        });
 
         // ---------- REGISTER BUTTON ----------
         btnRegister.setOnClickListener(v -> attemptRegister());
@@ -108,6 +122,16 @@ public class RegisterFragment extends Fragment {
             return;
         }
 
+        if (!name.matches("[a-zA-Z ]+")) {
+            Toast.makeText(getContext(), "Name must contain only English letters", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (!surname.matches("[a-zA-Z ]+")) {
+            Toast.makeText(getContext(), "Surname must contain only English letters", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             Toast.makeText(getContext(), "Invalid email format", Toast.LENGTH_SHORT).show();
             return;
@@ -129,30 +153,60 @@ public class RegisterFragment extends Fragment {
             Toast.makeText(getContext(), "Invalid birthday format", Toast.LENGTH_SHORT).show();
             return;
         }
+        db.collection("users").document(email).get()
+                .addOnSuccessListener(snapshot -> {
 
-        // ---------- HASH PASSWORD ----------
-        String hashedPassword = sha256(pass);
+                    if (snapshot.exists()) {
+                        Toast.makeText(getContext(), "Email already in use", Toast.LENGTH_SHORT).show();
+                        return; // STOP — do NOT update database
+                    }
 
-        // ---------- CREATE USER OBJECT ----------
-        User user = new User( email, name, surname, hashedPassword, birthdate);
+                    // ---------------- HASH PASSWORD ----------------
+                    String hashedPassword = sha256(pass);
 
-        // ---------- SAVE TO FIRESTORE ----------
-        db.collection("users")
-                .document(email)   // email = primary key
-                .set(user)
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(getContext(), "Account created!", Toast.LENGTH_SHORT).show();
+                    // ---------------- CREATE USER ----------------
+                    User user = new User(email, name, surname, hashedPassword, birthdate);
 
-                    // Go to login screen
-                    ((MainActivity) requireActivity()).getSupportFragmentManager()
-                            .beginTransaction()
-                            .replace(R.id.flFragment, new LoginFragment())
-                            .commit();
+                    // ---------------- SAVE USER ----------------
+                    db.collection("users").document(email)
+                            .set(user)
+                            .addOnSuccessListener(aVoid -> {
+                                Toast.makeText(getContext(), "Account created!", Toast.LENGTH_SHORT).show();
 
-                })
-                .addOnFailureListener(e ->
-                        Toast.makeText(getContext(), "Error saving account: " + e.getMessage(), Toast.LENGTH_LONG).show()
-                );
+                                ((MainActivity) requireActivity()).getSupportFragmentManager()
+                                        .beginTransaction()
+                                        .replace(R.id.flFragment, new LoginFragment())
+                                        .commit();
+                            })
+                            .addOnFailureListener(e ->
+                                    Toast.makeText(getContext(), "Error: " + e.getMessage(), Toast.LENGTH_LONG).show()
+                            );
+                });
+
+
+//        // ---------- HASH PASSWORD ----------
+//        String hashedPassword = sha256(pass);
+//
+//        // ---------- CREATE USER OBJECT ----------
+//        User user = new User( email, name, surname, hashedPassword, birthdate);
+//
+//        // ---------- SAVE TO FIRESTORE ----------
+//        db.collection("users")
+//                .document(email)   // email = primary key
+//                .set(user)
+//                .addOnSuccessListener(aVoid -> {
+//                    Toast.makeText(getContext(), "Account created!", Toast.LENGTH_SHORT).show();
+//
+//                    // Go to login screen
+//                    ((MainActivity) requireActivity()).getSupportFragmentManager()
+//                            .beginTransaction()
+//                            .replace(R.id.flFragment, new LoginFragment())
+//                            .commit();
+//
+//                })
+//                .addOnFailureListener(e ->
+//                        Toast.makeText(getContext(), "Error saving account: " + e.getMessage(), Toast.LENGTH_LONG).show()
+//                );
     }
 
     // ---------- SHA-256 HASH ----------
