@@ -8,7 +8,6 @@
     android:elevation="4dp"
     android:background="@drawable/header_background">
 
-
     <!-- Greeting Text -->
     <TextView
         android:id="@+id/textGreeting"
