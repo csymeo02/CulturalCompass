@@ -1,75 +1,61 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#FAFAFA"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:layout_height="match_parent"
+    android:background="#FAFAFA">
 
-    <!-- USER BUBBLE -->
-    <TextView
-        android:id="@+id/user_question"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="end"
-        android:layout_marginBottom="12dp"
-        android:background="@drawable/bubble_user"
-        android:padding="10dp"
-        android:text=""
-        android:textColor="#FFFFFF"
-        android:textSize="18sp"
-        android:visibility="gone" />
+    <include
+        android:id="@+id/header_ai"
+        layout="@layout/header_ai"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
 
-    <!-- ASSISTANT BUBBLE CONTAINER -->
+
     <LinearLayout
-        android:id="@+id/assistant_container"
-        android:layout_width="wrap_content"
+        android:id="@+id/empty_state"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="18dp"
-        android:gravity="start"
-        android:orientation="horizontal"
-        android:visibility="gone">
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="75dp">
 
-        <!-- Assistant Icon -->
         <ImageView
-            android:id="@+id/assistant_icon"
-            android:layout_width="34dp"
-            android:layout_height="34dp"
-            android:layout_gravity="center_vertical"
-            android:layout_marginEnd="10dp"
-            android:src="@drawable/ic_robot" />
+            android:layout_width="160dp"
+            android:layout_height="160dp"
+            android:src="@drawable/ic_robot"
+            android:layout_marginBottom="16dp" />
 
-        <!-- Assistant Bubble -->
-        <LinearLayout
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:background="@drawable/card_assistant"
-            android:orientation="vertical"
-            android:padding="10dp"
-            android:maxWidth="280dp">
+            android:text="Cultural Compass AI"
+            android:textSize="28sp"
+            android:textColor="#222222"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
 
-            <TextView
-                android:id="@+id/assistant_response"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text=""
-                android:textColor="#222222"
-                android:textSize="18sp" />
-        </LinearLayout>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ask me anything about landmarks, history, culture, or monuments!"
+            android:textSize="18sp"
+            android:textColor="#555"
+            android:gravity="center"/>
     </LinearLayout>
 
-    <!-- Spacer -->
-    <View
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/chat_recycler"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:padding="8dp"/>
 
-    <!-- Input Row -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
+        android:padding="12dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -79,20 +65,17 @@
             android:layout_height="48dp"
             android:layout_weight="1"
             android:background="@drawable/rounded_input_text"
-            android:hint="Ask me anything..."
-            android:inputType="text"
+            android:textSize="16sp"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
-            android:textColor="#222222"
-            android:textSize="16sp" />
+            android:hint="Ask me anything..." />
 
         <ImageButton
             android:id="@+id/send_button"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:background="@null"
-            android:contentDescription="Send"
             android:src="@drawable/ic_send"
+            android:background="@null"
             app:tint="#2196F3" />
     </LinearLayout>
 
