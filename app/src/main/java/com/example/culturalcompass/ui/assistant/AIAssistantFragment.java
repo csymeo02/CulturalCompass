@@ -18,7 +18,9 @@ import com.example.culturalcompass.R;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -155,7 +157,6 @@ public class AIAssistantFragment extends Fragment {
         }).start();
     }
 
-
     private void sendMessageToGemini(String userMsg) {
 
         try {
@@ -218,6 +219,8 @@ public class AIAssistantFragment extends Fragment {
 
                 requireActivity().runOnUiThread(() -> {
                     stopTyping = true;
+                    assistantResponse.setAlpha(0f);
+                    assistantResponse.animate().alpha(1f).setDuration(150).start();
                     assistantResponse.setText(reply);
                 });
 
@@ -241,6 +244,11 @@ public class AIAssistantFragment extends Fragment {
 
             conversationHistory.add(modelObj);
 
+            if (conversationHistory.size() > 12) {
+                conversationHistory.remove(1); // keep system prompt, trim oldest user msg
+            }
+
+
         } catch (Exception ignored) {
         }
     }
@@ -262,12 +270,19 @@ public class AIAssistantFragment extends Fragment {
             JSONObject content = candidates.getJSONObject(0).getJSONObject("content");
             JSONArray parts = content.getJSONArray("parts");
 
-            return parts.getJSONObject(0).getString("text");
+            return parts.getJSONObject(0).getString("text").trim();
 
         } catch (Exception e) {
             // Simple, clean error
             return "Something went wrong. Please try again.";
         }
     }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        conversationHistory.clear();
+    }
+
 
 }
