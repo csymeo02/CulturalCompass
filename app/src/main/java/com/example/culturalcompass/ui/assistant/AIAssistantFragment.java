@@ -5,11 +5,11 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -83,7 +83,13 @@ public class AIAssistantFragment extends Fragment {
         inputMessage = view.findViewById(R.id.input_message);
         sendButton = view.findViewById(R.id.send_button);
         clearButton = view.findViewById(R.id.ai_header_clear);
-        clearButton.setOnClickListener(v -> clearChat());
+        clearButton.setOnClickListener(v -> {
+            if (messages.isEmpty()) {
+                Toast.makeText(requireContext(), "No messages to clear.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            showClearDialog();
+        });
 
 
         // Init RecyclerView
@@ -98,6 +104,21 @@ public class AIAssistantFragment extends Fragment {
 
         return view;
     }
+
+
+    private void showClearDialog() {
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Clear Chat History?")
+                .setMessage("This will delete all your conversation.\nThis action cannot be undone.")
+                .setCancelable(true)
+                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                .setPositiveButton("Clear", (dialog, which) -> {
+                    clearChat();
+                    dialog.dismiss();
+                })
+                .show();
+    }
+
 
     private void clearChat() {
         conversationHistory.clear();
