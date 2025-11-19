@@ -3,6 +3,7 @@ package com.example.culturalcompass.model;
 import com.google.android.libraries.places.api.model.PhotoMetadata;
 
 public class Attraction {
+
     private String name;
     private double lat;
     private double lng;
@@ -13,6 +14,7 @@ public class Attraction {
     private Integer ratingCount;
     private boolean favorite;
     private PhotoMetadata photoMetadata;
+    private String placeId;   // 🔥 ADDED
 
     public Attraction(String name,
                       double lat,
@@ -22,7 +24,8 @@ public class Attraction {
                       String primaryTypeKey,
                       Double rating,
                       Integer ratingCount,
-                      PhotoMetadata photoMetadata) {
+                      PhotoMetadata photoMetadata,
+                      String placeId) {   // 🔥 ADDED
         this.name = name;
         this.lat = lat;
         this.lng = lng;
@@ -32,6 +35,7 @@ public class Attraction {
         this.rating = rating;
         this.ratingCount = ratingCount;
         this.photoMetadata = photoMetadata;
+        this.placeId = placeId;   // 🔥 ADDED
     }
 
     public String getName() { return name; }
@@ -49,4 +53,6 @@ public class Attraction {
     public void setFavorite(boolean favorite) { this.favorite = favorite; }
 
     public PhotoMetadata getPhotoMetadata() { return photoMetadata; }
+
+    public String getPlaceId() { return placeId; }
 }

@@ -7,17 +7,21 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RatingBar;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.example.culturalcompass.R;
 import com.example.culturalcompass.model.Attraction;
-import java.util.List;
-import java.util.Locale;
-import com.google.android.libraries.places.api.net.PlacesClient;
+import com.example.culturalcompass.model.FirestoreAttraction;
+import com.example.culturalcompass.model.Session;
 import com.google.android.libraries.places.api.model.PhotoMetadata;
 import com.google.android.libraries.places.api.net.FetchPhotoRequest;
+import com.google.android.libraries.places.api.net.PlacesClient;
+import com.google.firebase.firestore.FirebaseFirestore;
 
-
+import java.util.List;
+import java.util.Locale;
 
 public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder> {
 
@@ -46,39 +50,32 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Attraction a = items.get(position);
 
-
         holder.txtName.setText(a.getName());
         holder.txtType.setText(a.getType());
 
+        // --- Set chip color by type ---
         String typeKey = a.getPrimaryTypeKey();
-
         if (typeKey != null) {
             switch (typeKey) {
-
                 case "museum":
                     holder.txtType.setBackgroundResource(R.drawable.chip_museum);
-                    holder.txtType.setTextColor(0xFF5A3E2B); // dark brown
+                    holder.txtType.setTextColor(0xFF5A3E2B);
                     break;
 
                 case "art_gallery":
                     holder.txtType.setBackgroundResource(R.drawable.chip_art_gallery);
-                    holder.txtType.setTextColor(0xFF0A3A5C); // blue
+                    holder.txtType.setTextColor(0xFF0A3A5C);
                     break;
 
                 case "tourist_attraction":
-                    holder.txtType.setBackgroundResource(R.drawable.chip_attraction);
-                    holder.txtType.setTextColor(0xFF1F6B1F); // dark green
-                    break;
-
                 default:
-                    // fallback: treat as Chip attraction
                     holder.txtType.setBackgroundResource(R.drawable.chip_attraction);
                     holder.txtType.setTextColor(0xFF1F6B1F);
                     break;
             }
         }
 
-        // --- Distance formatting ---
+        // --- Distance ---
         double meters = a.getDistanceMeters();
         String distanceText;
         if (meters < 1000) {
@@ -88,61 +85,101 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
         }
         holder.txtDistance.setText(distanceText);
 
-        // --- Rating chip (4,4 ★★★★☆ (88)) or "No ratings yet" ---
+        // --- Rating ---
         Double rating = a.getRating();
         Integer ratingCount = a.getRatingCount();
 
         if (rating != null && ratingCount != null && ratingCount > 0) {
-            // Show normal rating chip
-            String ratingStr = String.format(Locale.getDefault(), "%.1f", rating);
-            holder.txtRatingValue.setText(ratingStr);
+            holder.txtRatingValue.setText(String.format(Locale.getDefault(), "%.1f", rating));
             holder.ratingBar.setRating(rating.floatValue());
-
-            String countStr = "(" + ratingCount + ")";
-            holder.txtRatingCount.setText(countStr);
-
+            holder.txtRatingCount.setText("(" + ratingCount + ")");
             holder.ratingBar.setVisibility(View.VISIBLE);
             holder.txtRatingCount.setVisibility(View.VISIBLE);
             holder.layoutRating.setVisibility(View.VISIBLE);
-
         } else {
-            // Show chip with "No ratings yet"
             holder.txtRatingValue.setText("No ratings yet");
             holder.ratingBar.setVisibility(View.GONE);
             holder.txtRatingCount.setVisibility(View.GONE);
             holder.layoutRating.setVisibility(View.VISIBLE);
         }
 
-
-        // --- Landmark photo ---
+        // --- Photo ---
         holder.imgPhoto.setImageResource(R.drawable.ic_landmark_placeholder);
-
         PhotoMetadata meta = a.getPhotoMetadata();
 
         if (meta != null && placesClient != null) {
-            FetchPhotoRequest request = FetchPhotoRequest.builder(meta)
+            int boundPos = holder.getBindingAdapterPosition();
+
+            FetchPhotoRequest req = FetchPhotoRequest.builder(meta)
                     .setMaxWidth(400)
                     .setMaxHeight(400)
                     .build();
 
-            int boundPosition = holder.getBindingAdapterPosition();
-
-            placesClient.fetchPhoto(request)
+            placesClient.fetchPhoto(req)
                     .addOnSuccessListener(response -> {
-                        if (holder.getBindingAdapterPosition() == boundPosition) {
+                        if (holder.getBindingAdapterPosition() == boundPos) {
                             holder.imgPhoto.setImageBitmap(response.getBitmap());
                         }
-                    })
-                    .addOnFailureListener(e -> {
                     });
         }
 
-        // --- Heart toggle ---
-        updateHeartIcon(holder, a.isFavorite());
+        // ======================================================
+        // 🟩 REAL FAVORITES (Firestore)
+        // ======================================================
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        String email = Session.currentUser != null ? Session.currentUser.getEmail() : null;
+
+        // A. Check if favorite
+        if (email != null) {
+            db.collection("users")
+                    .document(email)
+                    .collection("favorites")
+                    .document(a.getPlaceId())
+                    .get()
+                    .addOnSuccessListener(doc -> {
+                        boolean isFav = doc.exists();
+                        a.setFavorite(isFav);
+                        updateHeartIcon(holder, isFav);
+                    });
+        }
+
+        // B. Toggle and write to Firestore
         holder.imgFavorite.setOnClickListener(v -> {
+            if (email == null) return;
+
             boolean newFav = !a.isFavorite();
             a.setFavorite(newFav);
             updateHeartIcon(holder, newFav);
+
+            if (newFav) {
+                // Add
+                FirestoreAttraction fa = new FirestoreAttraction(
+                        a.getPlaceId(),
+                        a.getName(),
+                        a.getLat(),
+                        a.getLng(),
+                        a.getDistanceMeters(),
+                        a.getType(),
+                        a.getPrimaryTypeKey(),
+                        a.getRating(),
+                        a.getRatingCount()
+                );
+
+                db.collection("users")
+                        .document(email)
+                        .collection("favorites")
+                        .document(a.getPlaceId())
+                        .set(fa);
+
+            } else {
+                // Remove
+                db.collection("users")
+                        .document(email)
+                        .collection("favorites")
+                        .document(a.getPlaceId())
+                        .delete();
+            }
         });
     }
 
@@ -185,6 +222,5 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
             txtRatingCount = itemView.findViewById(R.id.txtRatingCount);
             ratingBar = itemView.findViewById(R.id.ratingBar);
         }
-
     }
 }

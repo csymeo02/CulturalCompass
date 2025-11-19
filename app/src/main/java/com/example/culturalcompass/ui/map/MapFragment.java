@@ -664,8 +664,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                                                                 fs.getPrimaryTypeKey(),
                                                                 fs.getRating(),
                                                                 fs.getRatingCount(),
-                                                                photoMetadata
+                                                                photoMetadata,
+                                                                fs.getId()
                                                         );
+
+
 
                                                         synchronized (attractions) {
                                                             attractions.add(attraction);
@@ -690,17 +693,31 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     }
 
 
-private void finalizeFirestoreAttractions(List<Attraction> list) {
-    Collections.sort(list, Comparator.comparingDouble(Attraction::getDistanceMeters));
+    private void finalizeFirestoreAttractions(List<Attraction> list) {
 
-    List<Attraction> top20 = list.subList(0, Math.min(20, list.size()));
+        // SAFETY: Fragment is not attached → do nothing
+        if (!isAdded() || getActivity() == null) {
+            return;
+        }
 
-    requireActivity().runOnUiThread(() -> {
-        allAttractions.clear();
-        allAttractions.addAll(top20);
-        applyFiltersAndSorting();
-    });
-}
+        Collections.sort(list, Comparator.comparingDouble(Attraction::getDistanceMeters));
+
+        List<Attraction> top20 = list.subList(0, Math.min(20, list.size()));
+
+        // On UI thread safely
+        requireActivity().runOnUiThread(() -> {
+
+            // DOUBLE SAFETY — callbacks might fire after UI thread posts again
+            if (!isAdded() || getActivity() == null) {
+                return;
+            }
+
+            allAttractions.clear();
+            allAttractions.addAll(top20);
+            applyFiltersAndSorting();
+        });
+    }
+
 
     private void clearAttractionsCollection(Runnable onComplete) {
 
@@ -751,7 +768,8 @@ private void finalizeFirestoreAttractions(List<Attraction> list) {
                                 fs.getPrimaryTypeKey(),
                                 fs.getRating(),
                                 fs.getRatingCount(),
-                                null
+                                null,
+                                fs.getId()
                         );
 
                         list.add(a);
