@@ -26,6 +26,18 @@ import java.util.Locale;
 
 public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Holder> {
 
+    // --- Callback for empty state ---
+    public interface OnEmptyStateListener {
+        void onEmpty();
+    }
+
+    private OnEmptyStateListener emptyListener;
+
+    public void setEmptyListener(OnEmptyStateListener listener) {
+        this.emptyListener = listener;
+    }
+
+    // --- Normal adapter fields ---
     private List<FirestoreAttraction> items;
     private PlacesClient placesClient;
 
@@ -64,15 +76,18 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Hold
         // Default placeholder
         h.imgPhoto.setImageResource(R.drawable.ic_landmark_placeholder);
 
-        // ⭐ LOAD REAL PHOTO FROM GOOGLE PLACES ⭐
+        // --- REAL PHOTO LOADING ---
         if (placesClient != null && a.getId() != null) {
 
-            List<Place.Field> fields = Arrays.asList(Place.Field.PHOTO_METADATAS);
+            List<Place.Field> fields = Arrays.asList(
+                    Place.Field.PHOTO_METADATAS
+            );
 
-            FetchPlaceRequest request = FetchPlaceRequest.builder(a.getId(), fields).build();
+            FetchPlaceRequest req = FetchPlaceRequest.builder(a.getId(), fields).build();
 
-            placesClient.fetchPlace(request)
+            placesClient.fetchPlace(req)
                     .addOnSuccessListener(response -> {
+
                         Place place = response.getPlace();
 
                         if (place.getPhotoMetadatas() != null &&
@@ -93,11 +108,12 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Hold
                     });
         }
 
-        // ⭐ UNFAVORITE BUTTON ⭐
+        // --- UNFAVORITE BUTTON ---
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         String email = Session.currentUser.getEmail();
 
         h.btnUnfavorite.setOnClickListener(v -> {
+
             int index = h.getBindingAdapterPosition();
             if (index == RecyclerView.NO_POSITION) return;
 
@@ -107,11 +123,18 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Hold
                     .document(a.getId())
                     .delete()
                     .addOnSuccessListener(x -> {
+
                         items.remove(index);
                         notifyItemRemoved(index);
-                        notifyItemRangeChanged(index, items.size());
+
+                        if (items.isEmpty() && emptyListener != null) {
+                            emptyListener.onEmpty();
+                        }
                     });
         });
+
+
+
     }
 
     @Override

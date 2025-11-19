@@ -4,10 +4,12 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -29,31 +31,42 @@ public class FavoritesFragment extends Fragment {
     private FirebaseFirestore db;
     private String email;
 
+    private View emptyContainer;
+    private TextView txtEmpty;
+
     @Nullable
     @Override
     public View onCreateView(
             @NonNull LayoutInflater inflater,
             @Nullable ViewGroup container,
-            @Nullable Bundle savedInstanceState
-    ) {
+            @Nullable Bundle savedInstanceState) {
+
         View v = inflater.inflate(R.layout.fragment_favorites, container, false);
 
         recycler = v.findViewById(R.id.recyclerFavorites);
         recycler.setLayoutManager(new LinearLayoutManager(getContext()));
 
+        emptyContainer = v.findViewById(R.id.emptyContainer);
+        txtEmpty = v.findViewById(R.id.txtEmpty);
+
         PlacesClient placesClient = Places.createClient(requireContext());
         adapter = new FavoritesAdapter(new ArrayList<>(), placesClient);
-        recycler.setAdapter(adapter);
 
+        adapter.setEmptyListener(() -> emptyContainer.setVisibility(View.VISIBLE));
+
+        recycler.setAdapter(adapter);
+        recycler.setItemAnimator(new DefaultItemAnimator());
 
         db = FirebaseFirestore.getInstance();
         email = Session.currentUser.getEmail();
 
         loadFavorites();
+
         return v;
     }
 
     private void loadFavorites() {
+
         db.collection("users")
                 .document(email)
                 .collection("favorites")
@@ -68,6 +81,14 @@ public class FavoritesFragment extends Fragment {
                     }
 
                     adapter.update(list);
+
+                    if (list.isEmpty()) {
+                        emptyContainer.setVisibility(View.VISIBLE);
+                    } else {
+                        emptyContainer.setVisibility(View.GONE);
+                    }
                 });
     }
 }
+
+
