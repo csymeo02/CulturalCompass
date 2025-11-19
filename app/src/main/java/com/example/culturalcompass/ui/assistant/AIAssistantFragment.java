@@ -344,4 +344,14 @@ public class AIAssistantFragment extends Fragment {
             mainHeader.setVisibility(View.VISIBLE);
 
     }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        View mainHeader = requireActivity().findViewById(R.id.header);
+        if (mainHeader != null)
+            mainHeader.setVisibility(View.GONE);
+    }
+
 }
