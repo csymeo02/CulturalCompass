@@ -45,6 +45,8 @@ firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging", version.ref = "messaging" }
 firebase-inappmessaging = { group = "com.google.firebase", name = "firebase-inappmessaging-display" }
 firebase-storage = { group = "com.google.firebase", name = "firebase-storage", version.ref = "storage" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth" } # password
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

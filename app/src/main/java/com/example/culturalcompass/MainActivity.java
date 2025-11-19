@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.widget.ImageView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
@@ -13,6 +14,7 @@ import com.example.culturalcompass.ui.map.MapFragment;
 import com.example.culturalcompass.ui.favorites.FavoritesFragment;
 import com.example.culturalcompass.ui.assistant.AIAssistantFragment;
 import com.example.culturalcompass.ui.register.RegisterFragment;
+import com.example.culturalcompass.ui.settings.SettingsFragment;
 import com.example.culturalcompass.ui.splash.SplashFragment;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
@@ -27,6 +29,17 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         BottomNavigationView bottomNavigationView = findViewById(R.id.bottomNavigationView);
+
+        // ---------- SETTINGS BUTTON CLICK ----------
+        ImageView settingsButton = findViewById(R.id.iconSettings);
+        if (settingsButton != null) {
+            settingsButton.setOnClickListener(v -> {
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.flFragment, new SettingsFragment())
+                        .addToBackStack(null)
+                        .commit();
+            });
+        }
 
         // Start with SPLASH
         if (savedInstanceState == null) {

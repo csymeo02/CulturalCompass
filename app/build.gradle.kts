@@ -58,6 +58,8 @@ dependencies {
     implementation(libs.firebase.storage)
     implementation(libs.firebase.messaging)
     implementation(libs.firebase.inappmessaging)
+    implementation(libs.firebase.auth)
+
 
 
 }

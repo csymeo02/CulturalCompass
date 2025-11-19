@@ -8,19 +8,20 @@ public class User {
     private String name;
     private String surname;
     private Date birthdate;    // EXACTLY like professor
-    private String passwordHash;
+    //private String passwordHash;
 
     // Required empty constructor for Firestore
     public User() {}
 
-    public User(String email, String name, String surname, String passwordHash,
+    public User(String email, String name, String surname,
+                //String passwordHash,
                 Date birthdate) {
 
         this.email = email;
         this.name = name;
         this.surname = surname;
         this.birthdate = birthdate;
-        this.passwordHash = passwordHash;
+        //this.passwordHash = passwordHash;
     }
 
     // GETTERS + SETTERS
@@ -37,6 +38,6 @@ public class User {
     public Date getBirthdate() { return birthdate; }
     public void setBirthdate(Date birthdate) { this.birthdate = birthdate; }
 
-    public String getPasswordHash() { return passwordHash; }
-    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
+    //public String getPasswordHash() { return passwordHash; }
+    //public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
 }
