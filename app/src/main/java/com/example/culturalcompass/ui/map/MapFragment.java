@@ -4,9 +4,11 @@ import static com.example.culturalcompass.R.id.placesContainer;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -31,6 +33,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.culturalcompass.R;
 import com.example.culturalcompass.model.Attraction;
 import com.example.culturalcompass.model.AttractionClusterItem;
+import com.example.culturalcompass.model.FirestoreAttraction;
+import com.example.culturalcompass.model.Session;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -51,14 +55,24 @@ import com.google.android.libraries.places.api.net.SearchNearbyRequest;
 import com.google.android.libraries.places.widget.Autocomplete;
 import com.google.android.libraries.places.widget.AutocompleteActivity;
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
+import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.Source;
+import com.google.firebase.firestore.WriteBatch;
 import com.google.maps.android.clustering.Cluster;
 import com.google.maps.android.clustering.ClusterManager;
+import com.google.firebase.firestore.FirebaseFirestore;
+
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 
 /**
  * Map screen that:
@@ -117,12 +131,26 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private ClusterManager<AttractionClusterItem> clusterManager;
 
+    private FirebaseFirestore db;
+    private String userEmail;
+
+
+
     public MapFragment() {
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        userEmail = Session.currentUser != null
+                ? Session.currentUser.getEmail()
+                : "guest@example.com"; // fallback
+
+        // DEBUG LOG (ADD THIS)
+        Log.d("USER EMAIL", "[" + userEmail + "]");
+
+        db = FirebaseFirestore.getInstance();
 
         if (!Places.isInitialized()) {
             Places.initializeWithNewPlacesApiEnabled(
@@ -252,6 +280,19 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         setupSortSpinner();
 
         return view;
+    }
+
+    private CollectionReference userAttractionsRef() {
+        return db.collection("users")
+                .document(userEmail)
+                .collection("attractions");
+    }
+
+    private boolean isOnline() {
+        ConnectivityManager cm =
+                (ConnectivityManager) requireContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        return netInfo != null && netInfo.isConnected();
     }
 
     private void openSearchAutocomplete() {
@@ -512,104 +553,233 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             double lon,
             List<String> includedTypes
     ) {
-        List<Place.Field> placeFields = Arrays.asList(
-                Place.Field.ID,
-                Place.Field.DISPLAY_NAME,
-                Place.Field.LOCATION,
-                Place.Field.PRIMARY_TYPE,
-                Place.Field.PRIMARY_TYPE_DISPLAY_NAME,
-                Place.Field.RATING,
-                Place.Field.USER_RATING_COUNT,
-                Place.Field.PHOTO_METADATAS
-        );
 
-        LatLng center = new LatLng(lat, lon);
-        CircularBounds circle = CircularBounds.newInstance(center, 5000);
+        clearAttractionsCollection(() -> {
 
-        SearchNearbyRequest request =
-                SearchNearbyRequest.builder(circle, placeFields)
-                        .setIncludedTypes(includedTypes)
-                        .setMaxResultCount(20)
-                        .setRankPreference(SearchNearbyRequest.RankPreference.DISTANCE)
-                        .build();
+            List<Place.Field> placeFields = Arrays.asList(
+                    Place.Field.ID,
+                    Place.Field.DISPLAY_NAME,
+                    Place.Field.LOCATION,
+                    Place.Field.PRIMARY_TYPE,
+                    Place.Field.PRIMARY_TYPE_DISPLAY_NAME,
+                    Place.Field.RATING,
+                    Place.Field.USER_RATING_COUNT,
+                    Place.Field.PHOTO_METADATAS
+            );
 
-        placesClient.searchNearby(request)
-                .addOnSuccessListener(response -> {
-                    List<Place> places = response.getPlaces();
-                    List<Attraction> attractions = new ArrayList<>();
+            LatLng center = new LatLng(lat, lon);
+            CircularBounds circle = CircularBounds.newInstance(center, 5000);
 
-                    for (Place place : places) {
-                        LatLng placeLoc = place.getLocation();
-                        if (placeLoc == null) continue;
+            SearchNearbyRequest request =
+                    SearchNearbyRequest.builder(circle, placeFields)
+                            .setIncludedTypes(includedTypes)
+                            .setMaxResultCount(20)
+                            .setRankPreference(SearchNearbyRequest.RankPreference.DISTANCE)
+                            .build();
 
-                        float[] dist = new float[1];
-                        android.location.Location.distanceBetween(
-                                userLat, userLon,
-                                placeLoc.latitude, placeLoc.longitude,
-                                dist
-                        );
-                        double distanceMeters = dist[0];
+            placesClient.searchNearby(request)
+                    .addOnSuccessListener(response -> {
 
-                        String name = place.getDisplayName();
-                        if (name == null || name.isEmpty()) {
-                            name = "Unknown place";
+                        List<Attraction> attractions = new ArrayList<>();
+                        AtomicInteger pending = new AtomicInteger(0);
+
+                        List<Place> places = response.getPlaces();
+
+                        for (Place place : places) {
+
+                            LatLng placeLoc = place.getLocation();
+                            if (placeLoc == null) continue;
+
+                            float[] dist = new float[1];
+                            android.location.Location.distanceBetween(
+                                    userLat, userLon,
+                                    placeLoc.latitude, placeLoc.longitude,
+                                    dist
+                            );
+                            double distanceMeters = dist[0];
+
+                            String name = place.getDisplayName();
+
+
+                            if (name == null || name.isEmpty()) name = "Unknown place";
+
+                            String primaryTypeKey = place.getPrimaryType();
+                            String typeLabel = place.getPrimaryTypeDisplayName();
+                            if (typeLabel == null || typeLabel.isEmpty())
+                                typeLabel = primaryTypeKey;
+
+                            PhotoMetadata photoMetadata;
+                            if (place.getPhotoMetadatas() != null &&
+                                    !place.getPhotoMetadatas().isEmpty()) {
+                                photoMetadata = place.getPhotoMetadatas().get(0);
+                            } else {
+                                photoMetadata = null;
+                            }
+
+                            Double rating = place.getRating();
+                            Integer ratingCount = place.getUserRatingCount();
+
+                            String placeId = place.getId();
+
+                            Log.d("WRITE_DEBUG", "Writing: " + placeId + " / name=" + name);
+
+
+                            FirestoreAttraction firestoreAttraction = new FirestoreAttraction(
+                                    placeId,
+                                    name,
+                                    placeLoc.latitude,
+                                    placeLoc.longitude,
+                                    distanceMeters,
+                                    typeLabel,
+                                    primaryTypeKey,
+                                    rating,
+                                    ratingCount
+                            );
+
+                            pending.incrementAndGet();
+
+                            userAttractionsRef()
+                                    .document(placeId)
+                                    .set(firestoreAttraction)
+                                    .addOnSuccessListener(v -> {
+
+                                        Source source = Source.DEFAULT;
+
+                                        userAttractionsRef()
+                                                .document(placeId)
+                                                .get(source)
+                                                .addOnSuccessListener(snapshot -> {
+
+                                                    if (snapshot.exists()) {
+
+                                                        FirestoreAttraction fs =
+                                                                snapshot.toObject(FirestoreAttraction.class);
+
+                                                        Attraction attraction = new Attraction(
+                                                                fs.getName(),
+                                                                fs.getLat(),
+                                                                fs.getLng(),
+                                                                fs.getDistanceMeters(),
+                                                                fs.getTypeLabel(),
+                                                                fs.getPrimaryTypeKey(),
+                                                                fs.getRating(),
+                                                                fs.getRatingCount(),
+                                                                photoMetadata,
+                                                                fs.getId()
+                                                        );
+
+
+
+                                                        synchronized (attractions) {
+                                                            attractions.add(attraction);
+                                                        }
+                                                    }
+
+                                                    if (pending.decrementAndGet() == 0) {
+                                                        finalizeFirestoreAttractions(attractions);
+                                                    }
+                                                });
+                                    });
+
                         }
+                    })
+                    .addOnFailureListener(e -> {
+                        e.printStackTrace();
+                        Toast.makeText(getContext(), "Error loading places: " + e.getMessage(),
+                                Toast.LENGTH_SHORT).show();
+                    });
 
-                        String primaryTypeKey = place.getPrimaryType();
-                        String typeLabel = place.getPrimaryTypeDisplayName();
-                        if (typeLabel == null || typeLabel.isEmpty()) {
-                            typeLabel = primaryTypeKey;
-                        }
+        });
+    }
 
-                        PhotoMetadata photoMetadata = null;
-                        if (place.getPhotoMetadatas() != null &&
-                                !place.getPhotoMetadatas().isEmpty()) {
-                            photoMetadata = place.getPhotoMetadatas().get(0);
-                        }
 
-                        Double rating = place.getRating();
-                        Integer ratingCount = place.getUserRatingCount();
+    private void finalizeFirestoreAttractions(List<Attraction> list) {
 
-                        attractions.add(
-                                new Attraction(
-                                        name,
-                                        placeLoc.latitude,
-                                        placeLoc.longitude,
-                                        distanceMeters,
-                                        typeLabel,
-                                        primaryTypeKey,
-                                        rating,
-                                        ratingCount,
-                                        photoMetadata
-                                )
-                        );
+        // SAFETY: Fragment is not attached → do nothing
+        if (!isAdded() || getActivity() == null) {
+            return;
+        }
+
+        Collections.sort(list, Comparator.comparingDouble(Attraction::getDistanceMeters));
+
+        List<Attraction> top20 = list.subList(0, Math.min(20, list.size()));
+
+        // On UI thread safely
+        requireActivity().runOnUiThread(() -> {
+
+            // DOUBLE SAFETY — callbacks might fire after UI thread posts again
+            if (!isAdded() || getActivity() == null) {
+                return;
+            }
+
+            allAttractions.clear();
+            allAttractions.addAll(top20);
+            applyFiltersAndSorting();
+        });
+    }
+
+
+    private void clearAttractionsCollection(Runnable onComplete) {
+
+        Source source = Source.DEFAULT;
+
+        userAttractionsRef()
+                .get(source)
+                .addOnSuccessListener(snapshot -> {
+
+                    WriteBatch batch = db.batch();
+
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        batch.delete(doc.getReference());
                     }
 
-                    Collections.sort(
-                            attractions,
-                            Comparator.comparingDouble(Attraction::getDistanceMeters)
-                    );
-
-                    List<Attraction> top20 =
-                            attractions.subList(0, Math.min(20, attractions.size()));
-
-                    if (getActivity() == null) return;
-
-                    getActivity().runOnUiThread(() -> {
-                        allAttractions.clear();
-                        allAttractions.addAll(top20);
-                        applyFiltersAndSorting();
-                    });
+                    batch.commit()
+                            .addOnSuccessListener(v -> onComplete.run())
+                            .addOnFailureListener(e -> {
+                                e.printStackTrace();
+                                onComplete.run();
+                            });
                 })
                 .addOnFailureListener(e -> {
                     e.printStackTrace();
-                    if (getContext() != null) {
-                        Toast.makeText(
-                                getContext(),
-                                "Error loading nearby places: " + e.getMessage(),
-                                Toast.LENGTH_SHORT
-                        ).show();
+                    onComplete.run();
+                });
+    }
+
+    private void loadOfflineAttractions() {
+        Source source = Source.CACHE;
+
+        userAttractionsRef()
+                .get(source)
+                .addOnSuccessListener(snapshot -> {
+
+                    List<Attraction> list = new ArrayList<>();
+
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        FirestoreAttraction fs = doc.toObject(FirestoreAttraction.class);
+
+                        // PhotoMetadata is null in offline mode
+                        Attraction a = new Attraction(
+                                fs.getName(),
+                                fs.getLat(),
+                                fs.getLng(),
+                                fs.getDistanceMeters(),
+                                fs.getTypeLabel(),
+                                fs.getPrimaryTypeKey(),
+                                fs.getRating(),
+                                fs.getRatingCount(),
+                                null,
+                                fs.getId()
+                        );
+
+                        list.add(a);
                     }
+
+                    finalizeFirestoreAttractions(list);
+
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(getContext(), "No offline data available", Toast.LENGTH_SHORT).show();
                 });
     }
 
@@ -631,8 +801,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             types = Arrays.asList("tourist_attraction", "museum", "art_gallery");
         }
 
-        loadNearbyAttractions(lat, lon, types);
+        if (isOnline()) {
+            loadNearbyAttractions(lat, lon, types);
+        } else {
+            loadOfflineAttractions();
+        }
     }
+
+
 
     /**
      * When a cluster is tapped, show a dialog listing all places inside that cluster.

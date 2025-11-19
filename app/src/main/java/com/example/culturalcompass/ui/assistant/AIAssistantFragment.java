@@ -1,26 +1,28 @@
 package com.example.culturalcompass.ui.assistant;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.culturalcompass.R;
+import com.example.culturalcompass.model.Message;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,22 +37,27 @@ import okhttp3.Response;
 public class AIAssistantFragment extends Fragment {
 
     private static String API_KEY;
-    private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
+    private static final MediaType JSON_MEDIA = MediaType.get("application/json; charset=utf-8");
 
-    private TextView assistantResponse;
-    private TextView userQuestion;
+    // UI
+    private TextView clearButton;
+    private RecyclerView chatRecycler;
+    private ChatAdapter chatAdapter;
     private EditText inputMessage;
     private ImageButton sendButton;
 
-    private LinearLayout assistantContainer;
-    private ImageView assistantIcon;
-
+    // Typing animation flag
     private volatile boolean stopTyping = false;
+
+    // RecyclerView messages
+    private final List<Message> messages = new ArrayList<>();
+
+    // History sent to Gemini
+    private final List<JSONObject> conversationHistory = new ArrayList<>();
 
     private final OkHttpClient client = new OkHttpClient();
 
-    // Session memory
-    private final List<JSONObject> conversationHistory = new ArrayList<>();
+    private LinearLayout emptyState;
 
 
     @Override
@@ -58,25 +65,39 @@ public class AIAssistantFragment extends Fragment {
                              ViewGroup container,
                              Bundle savedInstanceState) {
 
+
         View view = inflater.inflate(R.layout.fragment_assistant, container, false);
+
+        View mainHeader = requireActivity().findViewById(R.id.header);
+        if (mainHeader != null)
+            mainHeader.setVisibility(View.GONE);
+
+
+        emptyState = view.findViewById(R.id.empty_state);
+
 
         API_KEY = getString(R.string.gemini_api_key);
 
         // Bind UI
-        userQuestion = view.findViewById(R.id.user_question);
-        assistantResponse = view.findViewById(R.id.assistant_response);
-        assistantContainer = view.findViewById(R.id.assistant_container);
-        assistantIcon = view.findViewById(R.id.assistant_icon);
+        chatRecycler = view.findViewById(R.id.chat_recycler);
         inputMessage = view.findViewById(R.id.input_message);
         sendButton = view.findViewById(R.id.send_button);
+        clearButton = view.findViewById(R.id.ai_header_clear);
+        clearButton.setOnClickListener(v -> {
+            if (messages.isEmpty()) {
+                Toast.makeText(requireContext(), "No messages to clear.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            showClearDialog();
+        });
 
-        // Hide UI bubbles at start
-        userQuestion.setVisibility(View.GONE);
-        assistantContainer.setVisibility(View.GONE);
-        assistantResponse.setVisibility(View.GONE);
-        assistantIcon.setVisibility(View.GONE);
 
-        // Add system prompt to conversation memory
+        // Init RecyclerView
+        chatAdapter = new ChatAdapter(messages);
+        chatRecycler.setLayoutManager(new LinearLayoutManager(requireContext()));
+        chatRecycler.setAdapter(chatAdapter);
+
+        // System context
         addSystemContextMessage();
 
         setupSendListener();
@@ -85,23 +106,49 @@ public class AIAssistantFragment extends Fragment {
     }
 
 
+    private void showClearDialog() {
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Clear Chat History?")
+                .setMessage("This will delete all your conversation.\nThis action cannot be undone.")
+                .setCancelable(true)
+                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                .setPositiveButton("Clear", (dialog, which) -> {
+                    clearChat();
+                    dialog.dismiss();
+                })
+                .show();
+    }
+
+
+    private void clearChat() {
+        conversationHistory.clear();
+        addSystemContextMessage(); // keep system prompt
+
+        // Clear UI
+        messages.clear();
+        chatAdapter.notifyDataSetChanged();
+
+        // Show welcome screen again
+        emptyState.setVisibility(View.VISIBLE);
+
+        stopTyping = true;
+    }
+
+
     private void setupSendListener() {
         sendButton.setOnClickListener(v -> {
             String userMsg = inputMessage.getText().toString().trim();
             if (userMsg.isEmpty()) return;
 
-            // Show user bubble
-            userQuestion.setText(userMsg);
-            userQuestion.setVisibility(View.VISIBLE);
-
-            // Make assistant visible (with "thinking…")
-            assistantContainer.setVisibility(View.VISIBLE);
-            assistantIcon.setVisibility(View.VISIBLE);
-            assistantResponse.setVisibility(View.VISIBLE);
-            showTypingAnimation();
+            // Add user bubble to chat
+            addMessageToUI(new Message(Message.USER, userMsg));
 
             inputMessage.setText("");
 
+            // Show typing bubble
+            showTypingBubble();
+
+            // Send to Gemini
             sendMessageToGemini(userMsg);
         });
     }
@@ -117,14 +164,8 @@ public class AIAssistantFragment extends Fragment {
 
             txt.put("text",
                     "You are Cultural Compass, an AI cultural guide. " +
-                            "IMPORTANT RULES: " +
-                            "1) Never use asterisks (*). Not for emphasis, not for bullets, never. " +
-                            "2) Never format text with markdown. No bold, no italics, no code blocks. " +
-                            "3) Write in clean plain text only. " +
-                            "4) Keep answers short, friendly, and clear. " +
-                            "If the user requests formatting, ignore it and respond in plain text."
+                            "Rules: No asterisks, no markdown, plain text only, short and friendly."
             );
-
 
             parts.put(txt);
             sys.put("parts", parts);
@@ -135,27 +176,51 @@ public class AIAssistantFragment extends Fragment {
         }
     }
 
-    private void showTypingAnimation() {
-        stopTyping = false; // allow animation to run
+
+    private void addMessageToUI(Message msg) {
+        emptyState.setVisibility(View.GONE);
+        messages.add(msg);
+        chatAdapter.notifyItemInserted(messages.size() - 1);
+        chatRecycler.smoothScrollToPosition(messages.size() - 1);
+    }
+
+
+    @SuppressLint("NotifyDataSetChanged")
+    private void showTypingBubble() {
+        stopTyping = false;
+
+        // Add typing message
+        Message typingMsg = new Message(Message.ASSISTANT, "Typing...");
+        messages.add(typingMsg);
+        chatAdapter.notifyDataSetChanged();
+        chatRecycler.smoothScrollToPosition(messages.size() - 1);
 
         new Thread(() -> {
             String[] dots = {"", ".", "..", "..."};
-
             int i = 0;
-            while (!stopTyping) {
-                int index = i % dots.length;
-                String text = "Typing" + dots[index];
 
-                requireActivity().runOnUiThread(() -> assistantResponse.setText(text));
+            while (!stopTyping) {
+                String text = "Typing" + dots[i % dots.length];
+                int index = messages.size() - 1;
+                int fi = i;
+
+                requireActivity().runOnUiThread(() -> {
+                    if (index >= 0 && index < messages.size()) {
+                        messages.get(index).text = "Typing" + dots[fi % dots.length];
+                        chatAdapter.notifyDataSetChanged();
+                    }
+                });
 
                 i++;
                 try {
                     Thread.sleep(300);
                 } catch (InterruptedException ignored) {
                 }
+
             }
         }).start();
     }
+
 
     private void sendMessageToGemini(String userMsg) {
 
@@ -165,40 +230,38 @@ public class AIAssistantFragment extends Fragment {
             userObj.put("role", "user");
 
             JSONArray userParts = new JSONArray();
-            JSONObject textObj = new JSONObject();
-            textObj.put("text", userMsg);
-            userParts.put(textObj);
+            JSONObject t = new JSONObject();
+            t.put("text", userMsg);
+            userParts.put(t);
 
             userObj.put("parts", userParts);
 
             conversationHistory.add(userObj);
 
-        } catch (Exception e) {
-            assistantResponse.setText("JSON error: " + e.getMessage());
+        } catch (Exception ignored) {
+            addMessageToUI(new Message(Message.ASSISTANT, "JSON error."));
             return;
         }
 
-        // Build full JSON payload
+        // Build request JSON
         JSONArray contentsArray = new JSONArray(conversationHistory);
 
-        JSONObject requestBodyJson = new JSONObject();
+        JSONObject bodyJson = new JSONObject();
         try {
-            requestBodyJson.put("contents", contentsArray);
-        } catch (Exception e) {
-            assistantResponse.setText("JSON build error");
-            return;
+            bodyJson.put("contents", contentsArray);
+        } catch (Exception ignored) {
         }
 
-        RequestBody body = RequestBody.create(requestBodyJson.toString(), JSON);
+        RequestBody body = RequestBody.create(bodyJson.toString(), JSON_MEDIA);
 
-        String endpoint =
-                "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="
-                        + API_KEY;
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="
+                + API_KEY;
 
         Request request = new Request.Builder()
-                .url(endpoint)
+                .url(url)
                 .post(body)
                 .build();
+
 
         client.newCall(request).enqueue(new Callback() {
 
@@ -206,7 +269,8 @@ public class AIAssistantFragment extends Fragment {
             public void onFailure(Call call, IOException e) {
                 requireActivity().runOnUiThread(() -> {
                     stopTyping = true;
-                    assistantResponse.setText("Network error: " + e.getMessage());
+                    removeTypingBubble();
+                    addMessageToUI(new Message(Message.ASSISTANT, "Network error."));
                 });
             }
 
@@ -214,40 +278,42 @@ public class AIAssistantFragment extends Fragment {
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 String json = response.body().string();
-
                 String reply = parseReply(json);
 
                 requireActivity().runOnUiThread(() -> {
                     stopTyping = true;
-                    assistantResponse.setAlpha(0f);
-                    assistantResponse.animate().alpha(1f).setDuration(150).start();
-                    assistantResponse.setText(reply);
+                    removeTypingBubble();
+                    addMessageToUI(new Message(Message.ASSISTANT, reply));
                 });
 
-                addModelMessage(reply);
+                addReplyToConversationHistory(reply);
             }
         });
     }
 
 
-    private void addModelMessage(String reply) {
+    private void removeTypingBubble() {
+        int lastIndex = messages.size() - 1;
+        if (lastIndex >= 0 && messages.get(lastIndex).text.startsWith("Typing")) {
+            messages.remove(lastIndex);
+            chatAdapter.notifyDataSetChanged();
+        }
+    }
+
+
+    private void addReplyToConversationHistory(String reply) {
         try {
             JSONObject modelObj = new JSONObject();
             modelObj.put("role", "model");
 
             JSONArray parts = new JSONArray();
-            JSONObject part = new JSONObject();
-            part.put("text", reply);
-            parts.put(part);
+            JSONObject p = new JSONObject();
+            p.put("text", reply);
+            parts.put(p);
 
             modelObj.put("parts", parts);
 
             conversationHistory.add(modelObj);
-
-            if (conversationHistory.size() > 12) {
-                conversationHistory.remove(1); // keep system prompt, trim oldest user msg
-            }
-
 
         } catch (Exception ignored) {
         }
@@ -257,32 +323,25 @@ public class AIAssistantFragment extends Fragment {
     private String parseReply(String json) {
         try {
             JSONObject obj = new JSONObject(json);
-
-            if (!obj.has("candidates")) {
-                return "Error: Model did not return a valid response.";
-            }
-
             JSONArray candidates = obj.getJSONArray("candidates");
-            if (candidates.length() == 0) {
-                return "Error: Empty response from model.";
-            }
-
             JSONObject content = candidates.getJSONObject(0).getJSONObject("content");
             JSONArray parts = content.getJSONArray("parts");
 
             return parts.getJSONObject(0).getString("text").trim();
 
         } catch (Exception e) {
-            // Simple, clean error
-            return "Something went wrong. Please try again.";
+            return "Something went wrong. Try again.";
         }
     }
+
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         conversationHistory.clear();
+        View mainHeader = requireActivity().findViewById(R.id.header);
+        if (mainHeader != null)
+            mainHeader.setVisibility(View.VISIBLE);
+
     }
-
-
 }
