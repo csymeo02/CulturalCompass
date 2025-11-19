@@ -27,6 +27,14 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
 
     private List<Attraction> items;
     private PlacesClient placesClient;
+    private OnAttractionClickListener listener;
+
+    public interface OnAttractionClickListener {
+        void onAttractionClicked(Attraction attraction);
+    }
+    public void setOnAttractionClickListener(OnAttractionClickListener l) {
+        this.listener = l;
+    }
 
     public NearbyAdapter(List<Attraction> items, PlacesClient placesClient) {
         this.items = items;
@@ -48,7 +56,14 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+
+
+
         Attraction a = items.get(position);
+
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) listener.onAttractionClicked(a);
+        });
 
         holder.txtName.setText(a.getName());
         holder.txtType.setText(a.getType());
