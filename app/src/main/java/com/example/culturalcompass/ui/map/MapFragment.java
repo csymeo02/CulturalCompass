@@ -55,6 +55,10 @@ import com.google.android.libraries.places.api.net.SearchNearbyRequest;
 import com.google.android.libraries.places.widget.Autocomplete;
 import com.google.android.libraries.places.widget.AutocompleteActivity;
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.example.culturalcompass.ui.login.LoginFragment;
+
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.Source;
@@ -143,12 +147,22 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        userEmail = Session.currentUser != null
-                ? Session.currentUser.getEmail()
-                : "guest@example.com"; // fallback
 
-        // DEBUG LOG (ADD THIS)
-        Log.d("USER EMAIL", "[" + userEmail + "]");
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+
+        if (user == null) {
+            //  SAFETY: If somehow user is null → force back to login
+            requireActivity().getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.flFragment, new LoginFragment())
+                    .commit();
+            return;
+        }
+
+        userEmail = user.getEmail();   // SAFE: never null if logged in
+
+
+
 
         db = FirebaseFirestore.getInstance();
 
@@ -692,31 +706,73 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         });
     }
 
-
     private void finalizeFirestoreAttractions(List<Attraction> list) {
 
-        // SAFETY: Fragment is not attached → do nothing
-        if (!isAdded() || getActivity() == null) {
-            return;
-        }
+        if (!isAdded() || getActivity() == null) return;
 
         Collections.sort(list, Comparator.comparingDouble(Attraction::getDistanceMeters));
-
         List<Attraction> top20 = list.subList(0, Math.min(20, list.size()));
 
-        // On UI thread safely
-        requireActivity().runOnUiThread(() -> {
+        // ⭐ NEW — Load user's favorite IDs
+        db.collection("users")
+                .document(userEmail)
+                .collection("favorites")
+                .get()
+                .addOnSuccessListener(snapshot -> {
 
-            // DOUBLE SAFETY — callbacks might fire after UI thread posts again
-            if (!isAdded() || getActivity() == null) {
-                return;
-            }
+                    List<String> favIds = new ArrayList<>();
+                    for (DocumentSnapshot d : snapshot.getDocuments()) {
+                        favIds.add(d.getId());        // <-- favorite placeId
+                    }
 
-            allAttractions.clear();
-            allAttractions.addAll(top20);
-            applyFiltersAndSorting();
-        });
+                    // ⭐ NEW — Mark favorites before showing UI
+                    markFavorites(top20, favIds);      // <--- IMPORTANT
+
+                    // Continue with your normal UI logic
+                    requireActivity().runOnUiThread(() -> {
+                        if (!isAdded() || getActivity() == null) return;
+
+                        allAttractions.clear();
+                        allAttractions.addAll(top20);
+
+                        applyFiltersAndSorting();      // hearts now correct
+                    });
+                });
     }
+    // ⭐ NEW FUNCTION — Marks favorites in the list before sending to adapter
+    private void markFavorites(List<Attraction> list, List<String> favIds) {
+        for (Attraction a : list) {
+            a.setFavorite(favIds.contains(a.getPlaceId()));  // <-- Set flag
+        }
+    }
+
+
+
+
+//    private void finalizeFirestoreAttractions(List<Attraction> list) {
+//
+//        // SAFETY: Fragment is not attached → do nothing
+//        if (!isAdded() || getActivity() == null) {
+//            return;
+//        }
+//
+//        Collections.sort(list, Comparator.comparingDouble(Attraction::getDistanceMeters));
+//
+//        List<Attraction> top20 = list.subList(0, Math.min(20, list.size()));
+//
+//        // On UI thread safely
+//        requireActivity().runOnUiThread(() -> {
+//
+//            // DOUBLE SAFETY — callbacks might fire after UI thread posts again
+//            if (!isAdded() || getActivity() == null) {
+//                return;
+//            }
+//
+//            allAttractions.clear();
+//            allAttractions.addAll(top20);
+//            applyFiltersAndSorting();
+//        });
+//    }
 
 
     private void clearAttractionsCollection(Runnable onComplete) {

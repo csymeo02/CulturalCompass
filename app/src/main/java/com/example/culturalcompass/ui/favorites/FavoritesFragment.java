@@ -22,12 +22,15 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.firebase.auth.FirebaseAuth;      // after leontios fix
+import com.google.firebase.auth.FirebaseUser;     // afer leontios fix
+
 public class FavoritesFragment extends Fragment {
 
     private RecyclerView recycler;
     private FavoritesAdapter adapter;
     private FirebaseFirestore db;
-    private String email;
+    private String email;    // will come from FirebaseAuth
 
     @Nullable
     @Override
@@ -47,7 +50,16 @@ public class FavoritesFragment extends Fragment {
 
 
         db = FirebaseFirestore.getInstance();
-        email = Session.currentUser.getEmail();
+
+        //  FIXED: Using FirebaseAuth instead of Session.currentUser
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            // user is not logged in — avoid crash
+            return v;
+        }
+
+        email = user.getEmail();   // guaranteed non-null if logged in
+
 
         loadFavorites();
         return v;

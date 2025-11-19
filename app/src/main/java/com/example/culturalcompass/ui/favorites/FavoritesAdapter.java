@@ -24,6 +24,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
+import com.google.firebase.auth.FirebaseAuth;          // after leontios fix
+
 public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Holder> {
 
     private List<FirestoreAttraction> items;
@@ -95,7 +97,9 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Hold
 
         // ⭐ UNFAVORITE BUTTON ⭐
         FirebaseFirestore db = FirebaseFirestore.getInstance();
-        String email = Session.currentUser.getEmail();
+        // FIXED — Get email from FirebaseAuth instead of Session
+        String email = FirebaseAuth.getInstance().getCurrentUser().getEmail(); //  FIX leontios
+        //String email = Session.currentUser.getEmail();
 
         h.btnUnfavorite.setOnClickListener(v -> {
             int index = h.getBindingAdapterPosition();
