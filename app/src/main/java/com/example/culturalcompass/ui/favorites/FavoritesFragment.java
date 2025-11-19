@@ -9,8 +9,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.DefaultItemAnimator;
-import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.culturalcompass.R;
@@ -31,31 +30,31 @@ public class FavoritesFragment extends Fragment {
     private FirebaseFirestore db;
     private String email;
 
-    private View emptyContainer;
-    private TextView txtEmpty;
+    private View emptyContainer;   // NEW
+    private TextView txtEmpty;     // text inside it
 
     @Nullable
     @Override
     public View onCreateView(
             @NonNull LayoutInflater inflater,
             @Nullable ViewGroup container,
-            @Nullable Bundle savedInstanceState) {
-
+            @Nullable Bundle savedInstanceState
+    ) {
         View v = inflater.inflate(R.layout.fragment_favorites, container, false);
 
         recycler = v.findViewById(R.id.recyclerFavorites);
-        recycler.setLayoutManager(new LinearLayoutManager(getContext()));
+        recycler.setLayoutManager(new GridLayoutManager(getContext(), 2));
 
+        // NEW — get both views
         emptyContainer = v.findViewById(R.id.emptyContainer);
         txtEmpty = v.findViewById(R.id.txtEmpty);
 
         PlacesClient placesClient = Places.createClient(requireContext());
         adapter = new FavoritesAdapter(new ArrayList<>(), placesClient);
-
-        adapter.setEmptyListener(() -> emptyContainer.setVisibility(View.VISIBLE));
-
         recycler.setAdapter(adapter);
-        recycler.setItemAnimator(new DefaultItemAnimator());
+
+        // When the last item is removed
+        adapter.setEmptyListener(() -> emptyContainer.setVisibility(View.VISIBLE));
 
         db = FirebaseFirestore.getInstance();
         email = Session.currentUser.getEmail();
@@ -66,7 +65,6 @@ public class FavoritesFragment extends Fragment {
     }
 
     private void loadFavorites() {
-
         db.collection("users")
                 .document(email)
                 .collection("favorites")
@@ -82,6 +80,7 @@ public class FavoritesFragment extends Fragment {
 
                     adapter.update(list);
 
+                    // Toggle the empty container (heart + text)
                     if (list.isEmpty()) {
                         emptyContainer.setVisibility(View.VISIBLE);
                     } else {
@@ -90,5 +89,3 @@ public class FavoritesFragment extends Fragment {
                 });
     }
 }
-
-

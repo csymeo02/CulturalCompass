@@ -26,7 +26,6 @@ import java.util.Locale;
 
 public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Holder> {
 
-    // --- Callback for empty state ---
     public interface OnEmptyStateListener {
         void onEmpty();
     }
@@ -37,7 +36,6 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Hold
         this.emptyListener = listener;
     }
 
-    // --- Normal adapter fields ---
     private List<FirestoreAttraction> items;
     private PlacesClient placesClient;
 
@@ -68,15 +66,14 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Hold
 
         double meters = a.getDistanceMeters();
         if (meters < 1000) {
-            h.txtDistance.setText(String.format(Locale.getDefault(), "%.0f m away", meters));
+            h.txtDistance.setText(String.format(Locale.getDefault(), "%.0f m", meters));
         } else {
-            h.txtDistance.setText(String.format(Locale.getDefault(), "%.1f km away", meters / 1000));
+            h.txtDistance.setText(String.format(Locale.getDefault(), "%.1f km", meters / 1000));
         }
 
         // Default placeholder
         h.imgPhoto.setImageResource(R.drawable.ic_landmark_placeholder);
 
-        // --- REAL PHOTO LOADING ---
         if (placesClient != null && a.getId() != null) {
 
             List<Place.Field> fields = Arrays.asList(
@@ -108,7 +105,6 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Hold
                     });
         }
 
-        // --- UNFAVORITE BUTTON ---
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         String email = Session.currentUser.getEmail();
 
@@ -127,13 +123,12 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Hold
                         items.remove(index);
                         notifyItemRemoved(index);
 
+                        // Trigger empty callback
                         if (items.isEmpty() && emptyListener != null) {
                             emptyListener.onEmpty();
                         }
                     });
         });
-
-
 
     }
 

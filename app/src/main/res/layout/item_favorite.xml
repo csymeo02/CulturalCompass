@@ -1,64 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="horizontal"
-    android:padding="10dp"
-    android:layout_marginVertical="6dp"
-    android:layout_marginHorizontal="8dp"
-    android:background="@drawable/rounded_card">
+    android:padding="6dp"
+    android:background="@drawable/rounded_card"
+    android:layout_margin="8dp">
 
-    <!-- IMAGE -->
+    <!-- Image -->
     <ImageView
         android:id="@+id/imgFavPhoto"
-        android:layout_width="80dp"
-        android:layout_height="80dp"
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
         android:scaleType="centerCrop"
-        android:src="@drawable/ic_landmark_placeholder"
-        android:layout_marginEnd="10dp"/>
+        android:background="@drawable/rounded_card"
+        android:clipToOutline="true" />
 
-    <!-- TEXT BLOCK -->
-    <LinearLayout
-        android:layout_width="0dp"
+    <!-- Name -->
+    <TextView
+        android:id="@+id/txtFavName"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        android:layout_marginTop="6dp"
+        android:text="Place name"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:textSize="15sp"
+        android:ellipsize="end" />
 
-        <TextView
-            android:id="@+id/txtFavName"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Place name"
-            android:textStyle="bold"
-            android:textSize="16sp"/>
+    <!-- Type -->
+    <TextView
+        android:id="@+id/txtFavType"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Type"
+        android:textSize="13sp"
+        android:textColor="#666666"
+        android:layout_marginTop="2dp" />
 
-        <TextView
-            android:id="@+id/txtFavType"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Type"
-            android:textSize="14sp"
-            android:layout_marginTop="4dp"/>
+    <!-- Distance + Heart row -->
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center_vertical">
 
         <TextView
             android:id="@+id/txtFavDistance"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="324 m away"
+            android:text="342 m"
             android:textSize="13sp"
-            android:layout_marginTop="4dp"/>
+            android:textColor="#333333" />
 
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <ImageView
+            android:id="@+id/btnUnfavorite"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_heart_filled"
+            app:tint="#D32F2F"
+            android:padding="2dp"/>
     </LinearLayout>
 
-    <!-- UNFAVORITE BUTTON -->
-    <ImageView
-        android:id="@+id/btnUnfavorite"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
-        android:layout_marginStart="8dp"
-        android:padding="4dp"
-        android:src="@drawable/ic_heart_filled"
-        app:tint="#D32F2F"/>
 
 </LinearLayout>

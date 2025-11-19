@@ -1,54 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    android:padding="12dp">
 
-    <!-- Main column -->
-    <LinearLayout
-        android:orientation="vertical"
+    <!-- Title -->
+    <TextView
+        android:id="@+id/txtTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="My Favorites"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Content container (grid + empty message) -->
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="16dp">
-
-        <TextView
-            android:id="@+id/titleFavorites"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Your Favorites"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="12dp"/>
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerFavorites"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
-    </LinearLayout>
+            android:layout_height="match_parent" />
 
-    <!-- Empty state overlay (centered) -->
-    <LinearLayout
-        android:id="@+id/emptyContainer"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="gone">
-
-        <ImageView
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:src="@drawable/ic_heart_outline"
-            app:tint="#888888"
-            android:layout_marginBottom="10dp"/>
-
-        <TextView
-            android:id="@+id/txtEmpty"
+        <LinearLayout
+            android:id="@+id/emptyContainer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="You have no favorites yet 👀"
-            android:textSize="16sp"
-            android:textColor="#555555"/>
-    </LinearLayout>
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_gravity="center"
+            android:visibility="gone">
 
-</FrameLayout>
+            <ImageView
+                android:id="@+id/emptyHeart"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:src="@drawable/ic_heart_outline"
+                app:tint="#AAAAAA"
+                android:alpha="0.6" />
+
+            <TextView
+                android:id="@+id/txtEmpty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No favorites yet"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:paddingTop="8dp"
+                android:textColor="#777777"
+                android:gravity="center" />
+
+        </LinearLayout>
+
+
+    </FrameLayout>
+
+</LinearLayout>
