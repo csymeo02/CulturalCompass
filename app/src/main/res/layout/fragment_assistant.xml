@@ -33,6 +33,7 @@
             android:textSize="28sp"
             android:textColor="#222222"
             android:textStyle="bold"
+            android:gravity="center"
             android:layout_marginBottom="8dp" />
 
         <TextView
@@ -50,12 +51,29 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:padding="8dp"/>
+        android:padding="8dp" />
+
+    <TextView
+        android:id="@+id/ai_disclaimer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="AI can make mistakes — double-check important info."
+        android:textSize="13sp"
+        android:textColor="#777777"
+        android:gravity="center"
+        android:layout_gravity="center"
+        android:paddingTop="2dp"
+        android:paddingBottom="4dp"
+        android:layout_marginTop="2dp"
+        android:layout_marginBottom="4dp"/>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="12dp"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="10dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -78,5 +96,7 @@
             android:background="@null"
             app:tint="#2196F3" />
     </LinearLayout>
+
+
 
 </LinearLayout>
