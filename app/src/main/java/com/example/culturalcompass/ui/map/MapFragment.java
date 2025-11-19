@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.telecom.Call;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -35,6 +36,7 @@ import com.example.culturalcompass.model.Attraction;
 import com.example.culturalcompass.model.AttractionClusterItem;
 import com.example.culturalcompass.model.FirestoreAttraction;
 import com.example.culturalcompass.model.Session;
+import com.example.culturalcompass.ui.description.DescriptionFragment;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -66,8 +68,14 @@ import com.google.firebase.firestore.WriteBatch;
 import com.google.maps.android.clustering.Cluster;
 import com.google.maps.android.clustering.ClusterManager;
 import com.google.firebase.firestore.FirebaseFirestore;
+import okhttp3.Callback;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -77,6 +85,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import okhttp3.MediaType;
+
+import okhttp3.MediaType;
+import okhttp3.RequestBody;
 
 /**
  * Map screen that:
@@ -280,6 +296,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         recyclerNearby = view.findViewById(R.id.recyclerNearby);
         recyclerNearby.setLayoutManager(new LinearLayoutManager(requireContext()));
         nearbyAdapter = new NearbyAdapter(new ArrayList<>(), placesClient);
+        nearbyAdapter.setOnAttractionClickListener(attraction -> {
+            requestAIDescriptionAndOpenFragment(attraction);
+        });
         recyclerNearby.setAdapter(nearbyAdapter);
 
         spinnerFilter = view.findViewById(R.id.spinnerFilter);
@@ -295,6 +314,111 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         return view;
     }
+
+    private void requestAIDescriptionAndOpenFragment(Attraction a) {
+
+        String prompt =
+                "Give me a short friendly explanation (3–5 sentences, no markdown) "
+                        + "about this cultural place: " + a.getName()
+                        + ". The type is " + a.getType() + ".";
+
+        // Build Gemini request JSON
+        JSONObject body = new JSONObject();
+        try {
+            JSONArray contents = new JSONArray();
+            JSONObject userObj = new JSONObject();
+            userObj.put("role", "user");
+
+            JSONArray parts = new JSONArray();
+            JSONObject text = new JSONObject();
+            text.put("text", prompt);
+            parts.put(text);
+
+            userObj.put("parts", parts);
+            contents.put(userObj);
+            body.put("contents", contents);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // Correct okhttp3 RequestBody
+        okhttp3.RequestBody reqBody = okhttp3.RequestBody.create(
+                body.toString(),
+                okhttp3.MediaType.parse("application/json; charset=utf-8")
+        );
+
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/"
+                + "gemini-2.0-flash:generateContent?key="
+                + getString(R.string.gemini_api_key);
+
+        okhttp3.Request request = new okhttp3.Request.Builder()
+                .url(url)
+                .post(reqBody)
+                .build();
+
+        OkHttpClient client = new OkHttpClient();
+
+        client.newCall(request).enqueue(new okhttp3.Callback() {
+
+            @Override
+            public void onFailure(@NonNull okhttp3.Call call, @NonNull IOException e) {
+                requireActivity().runOnUiThread(() ->
+                        Toast.makeText(
+                                getContext(),
+                                "AI failed to load description",
+                                Toast.LENGTH_SHORT
+                        ).show()
+                );
+            }
+
+            @Override
+            public void onResponse(@NonNull okhttp3.Call call, @NonNull okhttp3.Response response)
+                    throws IOException {
+
+                String json = response.body().string();
+                String description = parseGeminiDescription(json);
+
+                requireActivity().runOnUiThread(() ->
+                        openDescriptionFragment(a, description)
+                );
+            }
+        });
+    }
+
+
+    private String parseGeminiDescription(String json) {
+        try {
+            JSONObject obj = new JSONObject(json);
+            JSONArray candidates = obj.getJSONArray("candidates");
+            JSONObject content = candidates.getJSONObject(0).getJSONObject("content");
+            JSONArray parts = content.getJSONArray("parts");
+            return parts.getJSONObject(0).getString("text").trim();
+        } catch (Exception e) {
+            return "No description available.";
+        }
+    }
+
+    private void openDescriptionFragment(Attraction a, String aiText) {
+
+        DescriptionFragment fragment = DescriptionFragment.newInstance(
+                a.getPlaceId(),
+                a.getName(),
+                a.getType(),
+                a.getPrimaryTypeKey(),
+                a.getDistanceMeters(),
+                a.getRating(),
+                a.getRatingCount(),
+                aiText
+        );
+
+        requireActivity().getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.flFragment, fragment)
+                .addToBackStack(null)
+                .commit();
+    }
+
 
     private CollectionReference userAttractionsRef() {
         return db.collection("users")

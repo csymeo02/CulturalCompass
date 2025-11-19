@@ -28,6 +28,16 @@ import com.google.firebase.auth.FirebaseAuth;          // after leontios fix
 
 public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Holder> {
 
+    public interface OnEmptyStateListener {
+        void onEmpty();
+    }
+
+    private OnEmptyStateListener emptyListener;
+
+    public void setEmptyListener(OnEmptyStateListener listener) {
+        this.emptyListener = listener;
+    }
+
     private List<FirestoreAttraction> items;
     private PlacesClient placesClient;
 
@@ -58,23 +68,25 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Hold
 
         double meters = a.getDistanceMeters();
         if (meters < 1000) {
-            h.txtDistance.setText(String.format(Locale.getDefault(), "%.0f m away", meters));
+            h.txtDistance.setText(String.format(Locale.getDefault(), "%.0f m", meters));
         } else {
-            h.txtDistance.setText(String.format(Locale.getDefault(), "%.1f km away", meters / 1000));
+            h.txtDistance.setText(String.format(Locale.getDefault(), "%.1f km", meters / 1000));
         }
 
         // Default placeholder
         h.imgPhoto.setImageResource(R.drawable.ic_landmark_placeholder);
 
-        // ⭐ LOAD REAL PHOTO FROM GOOGLE PLACES ⭐
         if (placesClient != null && a.getId() != null) {
 
-            List<Place.Field> fields = Arrays.asList(Place.Field.PHOTO_METADATAS);
+            List<Place.Field> fields = Arrays.asList(
+                    Place.Field.PHOTO_METADATAS
+            );
 
-            FetchPlaceRequest request = FetchPlaceRequest.builder(a.getId(), fields).build();
+            FetchPlaceRequest req = FetchPlaceRequest.builder(a.getId(), fields).build();
 
-            placesClient.fetchPlace(request)
+            placesClient.fetchPlace(req)
                     .addOnSuccessListener(response -> {
+
                         Place place = response.getPlace();
 
                         if (place.getPhotoMetadatas() != null &&
@@ -95,13 +107,13 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Hold
                     });
         }
 
-        // ⭐ UNFAVORITE BUTTON ⭐
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         // FIXED — Get email from FirebaseAuth instead of Session
         String email = FirebaseAuth.getInstance().getCurrentUser().getEmail(); //  FIX leontios
         //String email = Session.currentUser.getEmail();
 
         h.btnUnfavorite.setOnClickListener(v -> {
+
             int index = h.getBindingAdapterPosition();
             if (index == RecyclerView.NO_POSITION) return;
 
@@ -111,11 +123,17 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Hold
                     .document(a.getId())
                     .delete()
                     .addOnSuccessListener(x -> {
+
                         items.remove(index);
                         notifyItemRemoved(index);
-                        notifyItemRangeChanged(index, items.size());
+
+                        // Trigger empty callback
+                        if (items.isEmpty() && emptyListener != null) {
+                            emptyListener.onEmpty();
+                        }
                     });
         });
+
     }
 
     @Override
