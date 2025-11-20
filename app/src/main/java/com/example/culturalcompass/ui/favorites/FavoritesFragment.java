@@ -103,11 +103,37 @@ public class FavoritesFragment extends Fragment {
                         if (fa != null) list.add(fa);
                     }
 
+                    list.sort((a, b) -> {
+
+                        // --- 0) MINIMUM REVIEWS CHECK ---
+                        int countA = a.getRatingCount() != null ? a.getRatingCount() : 0;
+                        int countB = b.getRatingCount() != null ? b.getRatingCount() : 0;
+
+                        boolean aValid = countA >= 2;
+                        boolean bValid = countB >= 2;
+
+                        // Those with >= 2 reviews go FIRST
+                        if (aValid && !bValid) return -1;
+                        if (!aValid && bValid) return 1;
+
+                        // --- 1) RATING (null-safe) ---
+                        double ratingA = a.getRating() != null ? a.getRating() : 0.0;
+                        double ratingB = b.getRating() != null ? b.getRating() : 0.0;
+
+                        int cmp = Double.compare(ratingB, ratingA);
+                        if (cmp != 0) return cmp;
+
+                        // --- 2) REVIEW COUNT (null-safe) ---
+                        return Integer.compare(countB, countA);
+                    });
+
+
                     adapter.update(list);
 
                     emptyContainer.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
                 });
     }
+
 
 
     private void requestAIDescriptionAndOpen(FirestoreAttraction a) {
