@@ -30,7 +30,6 @@ import java.util.Locale;
 
 public class DescriptionFragment extends Fragment {
 
-    // ---- ARG KEYS ----
     private static final String ARG_PLACE_ID = "arg_place_id";
     private static final String ARG_NAME = "arg_name";
     private static final String ARG_TYPE_LABEL = "arg_type_label";
@@ -40,17 +39,18 @@ public class DescriptionFragment extends Fragment {
     private static final String ARG_RATING_COUNT = "arg_rating_count";
     private static final String ARG_DESCRIPTION = "arg_description";
 
-    // ---- Data ----
+    // ---- Data fields ----
     private String placeId;
     private String name;
     private String typeLabel;
     private String primaryTypeKey;
     private double distanceMeters;
-    private double rating;        // -1 if not available
-    private int ratingCount;      // 0 if none
+    private double rating;
+    private int ratingCount;
     private String aiDescription;
 
     // ---- UI ----
+    private ImageView btnBack;
     private ImageView imgPhoto;
     private TextView txtName;
     private TextView txtType;
@@ -62,26 +62,19 @@ public class DescriptionFragment extends Fragment {
     private ImageView imgFavorite;
     private TextView txtDescription;
 
-    // ---- Services ----
     private PlacesClient placesClient;
     private FirebaseFirestore db;
 
-    public DescriptionFragment() {
-        // Required empty constructor
-    }
+    public DescriptionFragment() {}
 
-    /**
-     * Factory: build fragment from Attraction fields + AI description.
-     * You will call this from MapFragment / NearbyAdapter.
-     */
     public static DescriptionFragment newInstance(
             String placeId,
             String name,
             String typeLabel,
             String primaryTypeKey,
             double distanceMeters,
-            Double rating,            // can be null
-            Integer ratingCount,      // can be null
+            Double rating,
+            Integer ratingCount,
             String aiDescription
     ) {
         DescriptionFragment f = new DescriptionFragment();
@@ -114,23 +107,24 @@ public class DescriptionFragment extends Fragment {
             aiDescription = args.getString(ARG_DESCRIPTION, "");
         }
 
-        // Init Places + Firestore
         if (!Places.isInitialized()) {
             Places.initializeWithNewPlacesApiEnabled(
                     requireContext().getApplicationContext(),
                     getString(R.string.google_maps_key)
             );
         }
+
         placesClient = Places.createClient(requireContext());
         db = FirebaseFirestore.getInstance();
     }
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater,
-                             @Nullable ViewGroup container,
-                             @Nullable Bundle savedInstanceState) {
-
+    public View onCreateView(
+            @NonNull LayoutInflater inflater,
+            @Nullable ViewGroup container,
+            @Nullable Bundle savedInstanceState
+    ) {
         return inflater.inflate(R.layout.fragment_description, container, false);
     }
 
@@ -138,6 +132,8 @@ public class DescriptionFragment extends Fragment {
     public void onViewCreated(@NonNull View v, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(v, savedInstanceState);
 
+        // --- Bind UI ----
+        btnBack = v.findViewById(R.id.btnBack);
         imgPhoto = v.findViewById(R.id.imgPhotoLarge);
         txtName = v.findViewById(R.id.txtNameLarge);
         txtType = v.findViewById(R.id.txtTypeChip);
@@ -149,35 +145,29 @@ public class DescriptionFragment extends Fragment {
         imgFavorite = v.findViewById(R.id.imgFavoriteDetail);
         txtDescription = v.findViewById(R.id.txtDescriptionAI);
 
-        // --- Bind basic text ---
+        // --- Back button (FIXED) ---
+        btnBack.setOnClickListener(view ->
+                requireActivity().getSupportFragmentManager().popBackStack()
+        );
+
+        // --- Basic text ---
         txtName.setText(name != null ? name : "Unknown place");
         txtType.setText(typeLabel != null ? typeLabel : primaryTypeKey);
 
         styleTypeChip(primaryTypeKey);
-
-        // --- Distance ---
         txtDistance.setText(formatDistance(distanceMeters));
-
-        // --- Rating ---
         bindRating();
 
-        // --- Description (AI text from assistant) ---
-        if (aiDescription == null || aiDescription.trim().isEmpty()) {
-            txtDescription.setText("No description is available yet.");
-        } else {
-            txtDescription.setText(aiDescription.trim());
-        }
+        txtDescription.setText(
+                aiDescription == null || aiDescription.trim().isEmpty()
+                        ? "No description available."
+                        : aiDescription.trim()
+        );
 
-        // --- Photo ---
         loadPhotoForPlace();
-
-        // --- Favorites ---
         setupFavorites();
     }
 
-    // -----------------------------
-    // Distance formatting
-    // -----------------------------
     private String formatDistance(double meters) {
         if (meters < 1000) {
             return String.format(Locale.getDefault(), "%.0f m away", meters);
@@ -186,9 +176,6 @@ public class DescriptionFragment extends Fragment {
         }
     }
 
-    // -----------------------------
-    // Rating binding
-    // -----------------------------
     private void bindRating() {
         if (rating > 0 && ratingCount > 0) {
             txtRatingValue.setText(String.format(Locale.getDefault(), "%.1f", rating));
@@ -203,129 +190,85 @@ public class DescriptionFragment extends Fragment {
         }
     }
 
-    // -----------------------------
-    // Type chip color (same logic as NearbyAdapter)
-    // -----------------------------
-    private void styleTypeChip(String typeKey) {
-        if (typeKey == null) return;
+    private void styleTypeChip(String key) {
+        if (key == null) return;
 
-        switch (typeKey) {
+        switch (key) {
             case "museum":
                 txtType.setBackgroundResource(R.drawable.chip_museum);
                 txtType.setTextColor(0xFF5A3E2B);
                 break;
-
             case "art_gallery":
                 txtType.setBackgroundResource(R.drawable.chip_art_gallery);
                 txtType.setTextColor(0xFF0A3A5C);
                 break;
-
-            case "tourist_attraction":
             default:
                 txtType.setBackgroundResource(R.drawable.chip_attraction);
                 txtType.setTextColor(0xFF1F6B1F);
-                break;
         }
     }
 
-    // -----------------------------
-    // Load large photo using Places
-    // -----------------------------
     private void loadPhotoForPlace() {
-        // Placeholder first
         imgPhoto.setImageResource(R.drawable.ic_landmark_placeholder);
 
-        if (placeId == null || placeId.isEmpty()) return;
+        if (placeId == null) return;
 
-        FetchPlaceRequest request = FetchPlaceRequest.newInstance(
+        FetchPlaceRequest req = FetchPlaceRequest.newInstance(
                 placeId,
                 Arrays.asList(Place.Field.PHOTO_METADATAS)
         );
 
-        placesClient.fetchPlace(request)
+        placesClient.fetchPlace(req)
                 .addOnSuccessListener(response -> {
-                    Place place = response.getPlace();
-                    if (place.getPhotoMetadatas() == null ||
-                            place.getPhotoMetadatas().isEmpty()) {
-                        return;
-                    }
+                    if (response.getPlace().getPhotoMetadatas() == null ||
+                            response.getPlace().getPhotoMetadatas().isEmpty()) return;
 
-                    PhotoMetadata meta = place.getPhotoMetadatas().get(0);
-                    FetchPhotoRequest photoRequest = FetchPhotoRequest.builder(meta)
+                    PhotoMetadata meta = response.getPlace().getPhotoMetadatas().get(0);
+
+                    FetchPhotoRequest photoReq = FetchPhotoRequest.builder(meta)
                             .setMaxWidth(800)
                             .setMaxHeight(800)
                             .build();
 
-                    placesClient.fetchPhoto(photoRequest)
-                            .addOnSuccessListener(photoResponse -> {
-                                imgPhoto.setImageBitmap(photoResponse.getBitmap());
-                            });
-                })
-                .addOnFailureListener(e -> {
-                    // Optional: show toast
-                    if (getContext() != null) {
-                        Toast.makeText(
-                                getContext(),
-                                "Could not load photo",
-                                Toast.LENGTH_SHORT
-                        ).show();
-                    }
+                    placesClient.fetchPhoto(photoReq)
+                            .addOnSuccessListener(photoResponse ->
+                                    imgPhoto.setImageBitmap(photoResponse.getBitmap())
+                            );
                 });
     }
 
-    // -----------------------------
-    // Favorites (Firestore)
-    // -----------------------------
     private void setupFavorites() {
         String email = Session.currentUser != null ? Session.currentUser.getEmail() : null;
-        if (email == null || placeId == null) {
+
+        if (email == null) {
             updateHeartIcon(false);
             return;
         }
 
-        // First: check if already favorite
         db.collection("users")
                 .document(email)
                 .collection("favorites")
                 .document(placeId)
                 .get()
-                .addOnSuccessListener(doc -> {
-                    boolean isFav = doc.exists();
-                    updateHeartIcon(isFav);
-                });
+                .addOnSuccessListener(doc -> updateHeartIcon(doc.exists()));
 
         imgFavorite.setOnClickListener(v -> {
-            if (email == null) return;
-
-            // Read from tag
-            Object tag = imgFavorite.getTag();
-            boolean currentlyFav = tag instanceof Boolean && (Boolean) tag;
-            boolean newFav = !currentlyFav;
+            boolean fav = imgFavorite.getTag() instanceof Boolean && (Boolean) imgFavorite.getTag();
+            boolean newFav = !fav;
 
             updateHeartIcon(newFav);
 
             if (newFav) {
-                // Add favorite
                 FirestoreAttraction fa = new FirestoreAttraction(
-                        placeId,
-                        name,
-                        0.0,   // We don't strictly need lat/lng here; or you can pass via args if you want
-                        0.0,
-                        distanceMeters,
-                        typeLabel,
-                        primaryTypeKey,
-                        rating > 0 ? rating : null,
-                        ratingCount > 0 ? ratingCount : null
+                        placeId, name, 0, 0, distanceMeters, typeLabel, primaryTypeKey,
+                        rating > 0 ? rating : null, ratingCount > 0 ? ratingCount : null
                 );
-
                 db.collection("users")
                         .document(email)
                         .collection("favorites")
                         .document(placeId)
                         .set(fa);
-
             } else {
-                // Remove favorite
                 db.collection("users")
                         .document(email)
                         .collection("favorites")
@@ -335,12 +278,10 @@ public class DescriptionFragment extends Fragment {
         });
     }
 
-    private void updateHeartIcon(boolean favorite) {
-        imgFavorite.setTag(favorite);
-        if (favorite) {
-            imgFavorite.setImageResource(R.drawable.ic_heart_filled);
-        } else {
-            imgFavorite.setImageResource(R.drawable.ic_heart_outline);
-        }
+    private void updateHeartIcon(boolean fav) {
+        imgFavorite.setTag(fav);
+        imgFavorite.setImageResource(
+                fav ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline
+        );
     }
 }
