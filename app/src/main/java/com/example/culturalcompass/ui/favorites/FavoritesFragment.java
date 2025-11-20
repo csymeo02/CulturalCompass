@@ -16,12 +16,11 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.culturalcompass.MainActivity;
 import com.example.culturalcompass.R;
 import com.example.culturalcompass.model.FirestoreAttraction;
 import com.example.culturalcompass.model.Session;
 import com.example.culturalcompass.ui.description.DescriptionFragment;
-import com.google.android.libraries.places.api.Places;
-import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -65,8 +64,8 @@ public class FavoritesFragment extends Fragment {
         emptyContainer = v.findViewById(R.id.emptyContainer);
         txtEmpty = v.findViewById(R.id.txtEmpty);
 
-        PlacesClient placesClient = Places.createClient(requireContext());
-        adapter = new FavoritesAdapter(new ArrayList<>(), placesClient);
+        adapter = new FavoritesAdapter(new ArrayList<>(), MainActivity.placesClient);
+
         recycler.setAdapter(adapter);
 
         adapter.setEmptyListener(() -> emptyContainer.setVisibility(View.VISIBLE));

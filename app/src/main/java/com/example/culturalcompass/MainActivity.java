@@ -16,6 +16,8 @@ import com.example.culturalcompass.ui.favorites.FavoritesFragment;
 import com.example.culturalcompass.ui.assistant.AIAssistantFragment;
 import com.example.culturalcompass.ui.register.RegisterFragment;
 import com.example.culturalcompass.ui.splash.SplashFragment;
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
@@ -23,15 +25,26 @@ public class MainActivity extends AppCompatActivity {
     private boolean forceHide = true;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private int currentTabId = R.id.nav_map;  // default after splash
+    public static PlacesClient placesClient;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        if (!Places.isInitialized()) {
+            Places.initializeWithNewPlacesApiEnabled(
+                    getApplicationContext(),
+                    getString(R.string.google_maps_key)
+            );
+        }
+
+        placesClient = Places.createClient(getApplicationContext());
+
+
         BottomNavigationView bottomNavigationView = findViewById(R.id.bottomNavigationView);
 
-        // Start with SPLASH
         if (savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction()
                     .replace(R.id.flFragment, new SplashFragment())
@@ -67,12 +80,6 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    // --- UI Visibility Control -----------------------------------------------
-
-    public boolean isSplashActive() {
-        return forceHide;  // splash is active when forceHide = true
-    }
-
     public void hideChrome() {
         forceHide = true;
         findViewById(R.id.header).setVisibility(View.GONE);
@@ -94,32 +101,18 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void navigateToLogin() {
-        getSupportFragmentManager().beginTransaction()
-                .replace(R.id.flFragment, new LoginFragment())
-                .commit();
-    }
-
-    public void navigateToRegister() {
-        getSupportFragmentManager().beginTransaction()
-                .replace(R.id.flFragment, new RegisterFragment())
-                .addToBackStack(null)
-                .commit();
-    }
-
     public void navigateToHome() {
         exitSplash();
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.flFragment, new MapFragment())
                 .commit();
 
-        updateGreeting();   // <— add this
+        updateGreeting();
     }
 
 
     public void updateGreeting() {
         TextView greeting = findViewById(R.id.textGreeting);
-
         if (Session.currentUser != null) {
             greeting.setText("Hello, " + Session.currentUser.getName());
         }

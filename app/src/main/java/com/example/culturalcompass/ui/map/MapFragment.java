@@ -33,6 +33,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.culturalcompass.MainActivity;
 import com.example.culturalcompass.R;
 import com.example.culturalcompass.model.Attraction;
 import com.example.culturalcompass.model.AttractionClusterItem;
@@ -153,7 +154,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     getString(R.string.google_maps_key)
             );
         }
-        placesClient = Places.createClient(requireContext());
+        placesClient = MainActivity.placesClient;
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
 
