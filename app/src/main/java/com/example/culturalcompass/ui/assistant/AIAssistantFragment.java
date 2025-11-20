@@ -60,6 +60,7 @@ public class AIAssistantFragment extends Fragment {
     private LinearLayout emptyState;
 
 
+
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container,
@@ -67,6 +68,8 @@ public class AIAssistantFragment extends Fragment {
 
 
         View view = inflater.inflate(R.layout.fragment_assistant, container, false);
+
+        setupKeyboardListener(view);
 
         View mainHeader = requireActivity().findViewById(R.id.header);
         if (mainHeader != null)
@@ -105,6 +108,50 @@ public class AIAssistantFragment extends Fragment {
         return view;
     }
 
+    private void setupKeyboardListener(View root) {
+        root.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+            // If fragment is not attached anymore, just ignore the callback
+            if (!isAdded() || getActivity() == null) return;
+
+            int heightDiff = root.getRootView().getHeight() - root.getHeight();
+            boolean keyboardVisible = heightDiff > 400;  // same threshold as before
+
+            View bottomBar = getActivity().findViewById(R.id.bottomNavigationView);
+            if (bottomBar == null) return;  // extra safety
+
+            if (keyboardVisible) {
+                // Hide bottom bar
+                bottomBar.setVisibility(View.GONE);
+
+                // Hide empty view if visible
+                if (emptyState.getVisibility() == View.VISIBLE) {
+                    emptyState.setVisibility(View.GONE);
+                }
+
+                // Scroll to last message (if any)
+                if (!messages.isEmpty()) {
+                    chatRecycler.post(() ->
+                            chatRecycler.smoothScrollToPosition(messages.size() - 1));
+                }
+
+            } else {
+                // Show bottom bar again
+                bottomBar.setVisibility(View.VISIBLE);
+
+                // Show empty view only if still no messages
+                if (messages.isEmpty()) {
+                    emptyState.setVisibility(View.VISIBLE);
+                }
+
+                if (!messages.isEmpty()) {
+                    chatRecycler.post(() ->
+                            chatRecycler.smoothScrollToPosition(messages.size() - 1));
+                }
+            }
+        });
+    }
+
+
 
     private void showClearDialog() {
         new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
@@ -120,6 +167,7 @@ public class AIAssistantFragment extends Fragment {
     }
 
 
+    @SuppressLint("NotifyDataSetChanged")
     private void clearChat() {
         conversationHistory.clear();
         addSystemContextMessage(); // keep system prompt
@@ -200,7 +248,6 @@ public class AIAssistantFragment extends Fragment {
             int i = 0;
 
             while (!stopTyping) {
-                String text = "Typing" + dots[i % dots.length];
                 int index = messages.size() - 1;
                 int fi = i;
 
@@ -266,7 +313,7 @@ public class AIAssistantFragment extends Fragment {
         client.newCall(request).enqueue(new Callback() {
 
             @Override
-            public void onFailure(Call call, IOException e) {
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 requireActivity().runOnUiThread(() -> {
                     stopTyping = true;
                     removeTypingBubble();
@@ -276,7 +323,8 @@ public class AIAssistantFragment extends Fragment {
 
 
             @Override
-            public void onResponse(Call call, Response response) throws IOException {
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                assert response.body() != null;
                 String json = response.body().string();
                 String reply = parseReply(json);
 
@@ -292,6 +340,7 @@ public class AIAssistantFragment extends Fragment {
     }
 
 
+    @SuppressLint("NotifyDataSetChanged")
     private void removeTypingBubble() {
         int lastIndex = messages.size() - 1;
         if (lastIndex >= 0 && messages.get(lastIndex).text.startsWith("Typing")) {
