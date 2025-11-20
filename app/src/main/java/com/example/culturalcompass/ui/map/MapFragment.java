@@ -64,12 +64,8 @@ import com.google.firebase.firestore.WriteBatch;
 import com.google.maps.android.clustering.Cluster;
 import com.google.maps.android.clustering.ClusterManager;
 import com.google.firebase.firestore.FirebaseFirestore;
-import okhttp3.Callback;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
 
+import okhttp3.OkHttpClient;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -84,11 +80,6 @@ import android.net.NetworkInfo;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-
-import okhttp3.MediaType;
-
-import okhttp3.MediaType;
-import okhttp3.RequestBody;
 
 /**
  * Map screen that:
@@ -352,7 +343,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 requireActivity().runOnUiThread(() ->
                         Toast.makeText(
                                 getContext(),
-                                "AI failed to load description",
+                                "Failed to load description",
                                 Toast.LENGTH_SHORT
                         ).show()
                 );
