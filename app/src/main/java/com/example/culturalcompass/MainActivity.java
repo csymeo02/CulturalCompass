@@ -4,10 +4,12 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
+import com.example.culturalcompass.model.Session;
 import com.example.culturalcompass.ui.login.LoginFragment;
 import com.example.culturalcompass.ui.map.MapFragment;
 import com.example.culturalcompass.ui.favorites.FavoritesFragment;
@@ -20,6 +22,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean forceHide = true;
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private int currentTabId = R.id.nav_map;  // default after splash
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,14 +39,21 @@ public class MainActivity extends AppCompatActivity {
         }
 
         bottomNavigationView.setOnItemSelectedListener(item -> {
+
+            // --- block reloading same tab ---
+            if (item.getItemId() == currentTabId) {
+                return false;  // ignore the click
+            }
+            currentTabId = item.getItemId();
+            // ---------------------------------
+
             Fragment selectedFragment = null;
 
-            int id = item.getItemId();
-            if (id == R.id.nav_map) {
+            if (item.getItemId() == R.id.nav_map) {
                 selectedFragment = new MapFragment();
-            } else if (id == R.id.nav_favorites) {
+            } else if (item.getItemId() == R.id.nav_favorites) {
                 selectedFragment = new FavoritesFragment();
-            } else if (id == R.id.nav_assistant) {
+            } else if (item.getItemId() == R.id.nav_assistant) {
                 selectedFragment = new AIAssistantFragment();
             }
 
@@ -54,6 +64,7 @@ public class MainActivity extends AppCompatActivity {
             }
             return true;
         });
+
     }
 
     // --- UI Visibility Control -----------------------------------------------
@@ -97,12 +108,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void navigateToHome() {
-        // show bottom nav again
         exitSplash();
-
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.flFragment, new MapFragment())
                 .commit();
+
+        updateGreeting();   // <— add this
     }
+
+
+    public void updateGreeting() {
+        TextView greeting = findViewById(R.id.textGreeting);
+
+        if (Session.currentUser != null) {
+            greeting.setText("Hello, " + Session.currentUser.getName());
+        }
+    }
+
 
 }

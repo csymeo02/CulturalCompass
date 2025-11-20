@@ -90,6 +90,9 @@ public class LoginFragment extends Fragment {
                         User user = doc.toObject(User.class);
                         Session.currentUser = user;
 
+                        ((MainActivity) requireActivity()).updateGreeting();
+
+
                         ((MainActivity) requireActivity()).navigateToHome();
 
                     } else {

@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.culturalcompass.R;
 import com.example.culturalcompass.model.Message;
+import com.example.culturalcompass.model.Session;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -212,6 +213,7 @@ public class AIAssistantFragment extends Fragment {
 
             txt.put("text",
                     "You are Cultural Compass, an AI cultural guide. " +
+                            "The name of the user is " + Session.currentUser.getName() +
                             "Rules: No asterisks, no markdown, plain text only, short and friendly."
             );
 
