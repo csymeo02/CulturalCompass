@@ -2,11 +2,11 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:padding="16dp"
-    android:gravity="center_vertical"
+    android:background="@drawable/header_background"
     android:elevation="4dp"
-    android:background="@drawable/header_background">
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="16dp">
 
     <!-- Greeting Text -->
     <TextView
@@ -26,9 +26,9 @@
         android:layout_height="40dp"
         android:layout_marginEnd="8dp"
         android:background="@drawable/icon_background"
+        android:contentDescription="@string/notifications"
         android:padding="10dp"
-        android:src="@drawable/ic_notifications"
-        android:contentDescription="Notifications" />
+        android:src="@drawable/ic_notifications" />
 
     <!-- Settings Icon -->
     <ImageView
@@ -36,8 +36,8 @@
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:background="@drawable/icon_background"
+        android:contentDescription="Settings"
         android:padding="10dp"
-        android:src="@drawable/ic_settings"
-        android:contentDescription="Settings" />
+        android:src="@drawable/ic_settings" />
 
 </LinearLayout>

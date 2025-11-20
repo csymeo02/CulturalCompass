@@ -1,48 +1,48 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical"
+    android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FAFAFA">
+    android:background="#FAFAFA"
+    android:orientation="vertical">
 
     <include
         android:id="@+id/header_ai"
         layout="@layout/header_ai"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:layout_height="wrap_content" />
 
 
     <LinearLayout
         android:id="@+id/empty_state"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
         android:gravity="center"
+        android:orientation="vertical"
         android:padding="75dp">
 
         <ImageView
             android:layout_width="160dp"
             android:layout_height="160dp"
-            android:src="@drawable/ic_robot"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="16dp"
+            android:src="@drawable/ic_robot" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Cultural Compass AI"
-            android:textSize="28sp"
-            android:textColor="#222222"
-            android:textStyle="bold"
+            android:layout_marginBottom="8dp"
             android:gravity="center"
-            android:layout_marginBottom="8dp" />
+            android:text="@string/cultural_compass_ai"
+            android:textColor="#222222"
+            android:textSize="28sp"
+            android:textStyle="bold" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Ask me anything about landmarks, history, culture, or monuments!"
-            android:textSize="18sp"
+            android:gravity="center"
+            android:text="@string/assistant_placeholder"
             android:textColor="#555"
-            android:gravity="center"/>
+            android:textSize="18sp" />
     </LinearLayout>
 
 
@@ -57,25 +57,25 @@
         android:id="@+id/ai_disclaimer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="AI can make mistakes — double-check important info."
-        android:textSize="13sp"
-        android:textColor="#777777"
-        android:gravity="center"
         android:layout_gravity="center"
+        android:layout_marginTop="2dp"
+        android:layout_marginBottom="4dp"
+        android:gravity="center"
         android:paddingTop="2dp"
         android:paddingBottom="4dp"
-        android:layout_marginTop="2dp"
-        android:layout_marginBottom="4dp"/>
+        android:text="@string/ai_disclaimer"
+        android:textColor="#777777"
+        android:textSize="13sp" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingLeft="12dp"
-        android:paddingRight="12dp"
-        android:paddingTop="4dp"
-        android:paddingBottom="10dp"
         android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:paddingLeft="12dp"
+        android:paddingTop="4dp"
+        android:paddingRight="12dp"
+        android:paddingBottom="10dp">
 
         <EditText
             android:id="@+id/input_message"
@@ -83,20 +83,19 @@
             android:layout_height="48dp"
             android:layout_weight="1"
             android:background="@drawable/rounded_input_text"
-            android:textSize="16sp"
+            android:hint="@string/send_placeholder"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
-            android:hint="Ask me anything..." />
+            android:textSize="16sp" />
 
         <ImageButton
             android:id="@+id/send_button"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:src="@drawable/ic_send"
             android:background="@null"
+            android:src="@drawable/ic_send"
             app:tint="#2196F3" />
     </LinearLayout>
-
 
 
 </LinearLayout>

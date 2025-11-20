@@ -3,8 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#FAFAFA">
+    android:background="#FAFAFA"
+    android:orientation="vertical">
 
     <!-- Map Section with floating search bar -->
     <FrameLayout
@@ -29,18 +29,18 @@
             android:id="@+id/searchBar"
             android:layout_width="250dp"
             android:layout_height="42dp"
+            android:layout_gravity="top|start"
+            android:layout_marginStart="20dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_search_transparent"
+            android:drawableLeft="@drawable/ic_search"
+            android:drawablePadding="10dp"
+            android:elevation="10dp"
             android:hint="Search places"
             android:paddingHorizontal="14dp"
             android:paddingVertical="8dp"
             android:textColor="#000"
-            android:textSize="14sp"
-            android:background="@drawable/bg_search_transparent"
-            android:drawableLeft="@drawable/ic_search"
-            android:drawablePadding="10dp"
-            android:layout_marginTop="10dp"
-            android:layout_marginStart="20dp"
-            android:layout_gravity="top|start"
-            android:elevation="10dp" />
+            android:textSize="14sp" />
     </FrameLayout>
 
 
@@ -49,8 +49,8 @@
         android:id="@+id/layoutHeaderNearby"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
         android:gravity="center_vertical"
+        android:orientation="horizontal"
         android:paddingHorizontal="12dp"
         android:paddingTop="8dp"
         android:paddingBottom="4dp">
@@ -67,19 +67,19 @@
                 android:id="@+id/txtNearbyTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Nearby Landmarks"
+                android:text="@string/nearby_landmarks"
+                android:textColor="#111111"
                 android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="#111111" />
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/txtNearbySubtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="Close to you"
-                android:textSize="12sp"
-                android:textColor="#888888" />
+                android:text="@string/close_to_you"
+                android:textColor="#888888"
+                android:textSize="12sp" />
         </LinearLayout>
 
         <!-- FILTER BLOCK with label over border -->
@@ -87,29 +87,29 @@
             android:id="@+id/layoutFilter"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginEnd="8dp">
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1">
 
             <Spinner
                 android:id="@+id/spinnerFilter"
                 android:layout_width="match_parent"
                 android:layout_height="36dp"
                 android:layout_marginTop="6dp"
-                android:paddingHorizontal="10dp"
                 android:background="@drawable/spinner_outline_bg"
+                android:paddingHorizontal="10dp"
                 android:spinnerMode="dropdown" />
 
             <TextView
                 android:id="@+id/labelFilter"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Filter"
-                android:textSize="12sp"
-                android:textColor="#666666"
-                android:background="#fef7ff"
-                android:paddingHorizontal="6dp"
                 android:layout_alignTop="@id/spinnerFilter"
                 android:layout_marginStart="16dp"
+                android:background="#fef7ff"
+                android:paddingHorizontal="6dp"
+                android:text="@string/filter"
+                android:textColor="#666666"
+                android:textSize="12sp"
                 android:translationY="-8dp" />
         </RelativeLayout>
 
@@ -118,16 +118,16 @@
             android:id="@+id/layoutSort"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp">
+            android:layout_marginStart="8dp"
+            android:layout_weight="1">
 
             <Spinner
                 android:id="@+id/spinnerSort"
                 android:layout_width="match_parent"
                 android:layout_height="36dp"
                 android:layout_marginTop="6dp"
-                android:paddingHorizontal="10dp"
                 android:background="@drawable/spinner_outline_bg"
+                android:paddingHorizontal="10dp"
                 android:spinnerMode="dropdown" />
 
             <!-- Label sitting on top of the border -->
@@ -135,13 +135,13 @@
                 android:id="@+id/labelSortBy"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Sort By"
-                android:textSize="12sp"
-                android:textColor="#666666"
-                android:background="#fef7ff"
-                android:paddingHorizontal="6dp"
                 android:layout_alignTop="@id/spinnerSort"
                 android:layout_marginStart="16dp"
+                android:background="#fef7ff"
+                android:paddingHorizontal="6dp"
+                android:text="@string/sort_by"
+                android:textColor="#666666"
+                android:textSize="12sp"
                 android:translationY="-8dp" />
         </RelativeLayout>
 

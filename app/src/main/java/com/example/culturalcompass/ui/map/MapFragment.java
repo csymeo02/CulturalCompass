@@ -282,8 +282,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         String prompt =
                 "Give me a short friendly explanation (3–5 sentences, no markdown) "
-                        + "about this cultural place: " + a.getName()
-                        + ". The type is " + a.getType() + ".";
+                        + "about this place: " + a.getName() + ". "
+                        + "It is a " + a.getType() + ". "
+                        + "If the place is well-known or historically important, include useful background and key details. "
+                        + "If it's small or local, keep the description simple and experience-based. "
+                        + "Do NOT mention coordinates or country names.";
+
 
         JSONObject body = new JSONObject();
         try {
