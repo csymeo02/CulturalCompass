@@ -3,12 +3,14 @@ package com.example.culturalcompass.ui.map;
 import static com.example.culturalcompass.R.id.placesContainer;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
-import android.telecom.Call;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -31,12 +33,13 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.culturalcompass.MainActivity;
 import com.example.culturalcompass.R;
 import com.example.culturalcompass.model.Attraction;
 import com.example.culturalcompass.model.AttractionClusterItem;
 import com.example.culturalcompass.model.FirestoreAttraction;
-import com.example.culturalcompass.model.Session;
 import com.example.culturalcompass.ui.description.DescriptionFragment;
+import com.example.culturalcompass.ui.login.LoginFragment;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -59,21 +62,17 @@ import com.google.android.libraries.places.widget.AutocompleteActivity;
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.example.culturalcompass.ui.login.LoginFragment;
-
 import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Source;
 import com.google.firebase.firestore.WriteBatch;
 import com.google.maps.android.clustering.Cluster;
 import com.google.maps.android.clustering.ClusterManager;
-import com.google.firebase.firestore.FirebaseFirestore;
-import okhttp3.Callback;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -81,26 +80,22 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
-
+import okhttp3.Call;
+import okhttp3.Callback;
 import okhttp3.MediaType;
-
-import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
 import okhttp3.RequestBody;
+import okhttp3.Response;
 
 /**
- * Map screen that:
- * - Tracks live GPS or a searched location
- * - Loads nearby cultural places via Places Nearby Search
- * - Filters by type (tourist attraction / museum / art gallery)
- * - Sorts by distance, rating, or best overall
- * - Shows clustered markers on Google Maps
+ * Map screen:
+ * - Uses FirebaseAuth to get current user (email used for Firestore paths)
+ * - Loads nearby cultural places with Google Places
+ * - Caches them in Firestore per user
+ * - Marks favorites based on /users/{email}/favorites
+ * - Supports filters, sorting and clustering
  */
 public class MapFragment extends Fragment implements OnMapReadyCallback {
 
@@ -154,8 +149,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private FirebaseFirestore db;
     private String userEmail;
 
-
-
     public MapFragment() {
     }
 
@@ -163,32 +156,39 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-
-
+        // ---- Get current Firebase user ----
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-
         if (user == null) {
-            //  SAFETY: If somehow user is null → force back to login
-            requireActivity().getSupportFragmentManager().beginTransaction()
+            // If somehow no user, send them back to Login and stop
+            requireActivity().getSupportFragmentManager()
+                    .beginTransaction()
                     .replace(R.id.flFragment, new LoginFragment())
                     .commit();
             return;
         }
 
-        userEmail = user.getEmail();   // SAFE: never null if logged in
+        userEmail = user.getEmail();
+        if (userEmail == null) {
+            userEmail = "guest@example.com"; // very unlikely, but safe fallback
+        }
 
-
-
+        Log.d("USER EMAIL", "[" + userEmail + "]");
 
         db = FirebaseFirestore.getInstance();
 
+        // ---- Places client (from MainActivity static) ----
         if (!Places.isInitialized()) {
             Places.initializeWithNewPlacesApiEnabled(
                     requireContext().getApplicationContext(),
                     getString(R.string.google_maps_key)
             );
         }
-        placesClient = Places.createClient(requireContext());
+
+        placesClient = MainActivity.placesClient;
+        if (placesClient == null) {
+            // Fallback in case static client is not yet set
+            placesClient = Places.createClient(requireContext().getApplicationContext());
+        }
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
 
@@ -239,6 +239,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             }
         };
 
+        // Permission launcher
         requestPermissionLauncher =
                 registerForActivityResult(
                         new ActivityResultContracts.RequestPermission(),
@@ -255,6 +256,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         }
                 );
 
+        // Places Autocomplete launcher
         autocompleteLauncher =
                 registerForActivityResult(
                         new ActivityResultContracts.StartActivityForResult(),
@@ -296,9 +298,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         recyclerNearby = view.findViewById(R.id.recyclerNearby);
         recyclerNearby.setLayoutManager(new LinearLayoutManager(requireContext()));
         nearbyAdapter = new NearbyAdapter(new ArrayList<>(), placesClient);
-        nearbyAdapter.setOnAttractionClickListener(attraction -> {
-            requestAIDescriptionAndOpenFragment(attraction);
-        });
+        nearbyAdapter.setOnAttractionClickListener(this::requestAIDescriptionAndOpenFragment);
         recyclerNearby.setAdapter(nearbyAdapter);
 
         spinnerFilter = view.findViewById(R.id.spinnerFilter);
@@ -315,14 +315,18 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         return view;
     }
 
+    // ----------------- AI description + DescriptionFragment ------------------
+
     private void requestAIDescriptionAndOpenFragment(Attraction a) {
 
         String prompt =
                 "Give me a short friendly explanation (3–5 sentences, no markdown) "
-                        + "about this cultural place: " + a.getName()
-                        + ". The type is " + a.getType() + ".";
+                        + "about this place: " + a.getName() + ". "
+                        + "It is a " + a.getType() + ". "
+                        + "If the place is well-known or historically important, include useful background and key details. "
+                        + "If it's small or local, keep the description simple and experience-based. "
+                        + "Do NOT mention coordinates or country names.";
 
-        // Build Gemini request JSON
         JSONObject body = new JSONObject();
         try {
             JSONArray contents = new JSONArray();
@@ -342,50 +346,50 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             e.printStackTrace();
         }
 
-        // Correct okhttp3 RequestBody
-        okhttp3.RequestBody reqBody = okhttp3.RequestBody.create(
+        RequestBody reqBody = RequestBody.create(
                 body.toString(),
-                okhttp3.MediaType.parse("application/json; charset=utf-8")
+                MediaType.parse("application/json; charset=utf-8")
         );
 
         String url = "https://generativelanguage.googleapis.com/v1beta/models/"
                 + "gemini-2.0-flash:generateContent?key="
                 + getString(R.string.gemini_api_key);
 
-        okhttp3.Request request = new okhttp3.Request.Builder()
+        Request request = new Request.Builder()
                 .url(url)
                 .post(reqBody)
                 .build();
 
         OkHttpClient client = new OkHttpClient();
 
-        client.newCall(request).enqueue(new okhttp3.Callback() {
+        client.newCall(request).enqueue(new Callback() {
 
             @Override
-            public void onFailure(@NonNull okhttp3.Call call, @NonNull IOException e) {
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                if (!isAdded()) return;
                 requireActivity().runOnUiThread(() ->
                         Toast.makeText(
                                 getContext(),
-                                "AI failed to load description",
+                                "Failed to load description",
                                 Toast.LENGTH_SHORT
                         ).show()
                 );
             }
 
             @Override
-            public void onResponse(@NonNull okhttp3.Call call, @NonNull okhttp3.Response response)
+            public void onResponse(@NonNull Call call, @NonNull Response response)
                     throws IOException {
 
                 String json = response.body().string();
                 String description = parseGeminiDescription(json);
 
+                if (!isAdded()) return;
                 requireActivity().runOnUiThread(() ->
                         openDescriptionFragment(a, description)
                 );
             }
         });
     }
-
 
     private String parseGeminiDescription(String json) {
         try {
@@ -419,6 +423,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 .commit();
     }
 
+    // ----------------- Firestore helpers -----------------
 
     private CollectionReference userAttractionsRef() {
         return db.collection("users")
@@ -432,6 +437,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         NetworkInfo netInfo = cm.getActiveNetworkInfo();
         return netInfo != null && netInfo.isConnected();
     }
+
+    // ----------------- Places search / map interactions -----------------
 
     private void openSearchAutocomplete() {
         List<Place.Field> fields = Arrays.asList(
@@ -507,6 +514,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
+    @SuppressLint("PotentialBehaviorOverride")
     private void initClusterManager() {
         if (mMap == null || getContext() == null) return;
 
@@ -683,161 +691,144 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 );
     }
 
-    /**
-     * Performs a Nearby Search using the Places SDK and converts results to Attraction objects.
-     */
+    // ----------------- Load nearby & cache to Firestore -----------------
+
     private void loadNearbyAttractions(
             double lat,
             double lon,
             List<String> includedTypes
     ) {
+        if (!isAdded()) return;
 
-        clearAttractionsCollection(() -> {
+        List<Place.Field> placeFields = Arrays.asList(
+                Place.Field.ID,
+                Place.Field.DISPLAY_NAME,
+                Place.Field.LOCATION,
+                Place.Field.PRIMARY_TYPE,
+                Place.Field.PRIMARY_TYPE_DISPLAY_NAME,
+                Place.Field.RATING,
+                Place.Field.USER_RATING_COUNT,
+                Place.Field.PHOTO_METADATAS
+        );
 
-            List<Place.Field> placeFields = Arrays.asList(
-                    Place.Field.ID,
-                    Place.Field.DISPLAY_NAME,
-                    Place.Field.LOCATION,
-                    Place.Field.PRIMARY_TYPE,
-                    Place.Field.PRIMARY_TYPE_DISPLAY_NAME,
-                    Place.Field.RATING,
-                    Place.Field.USER_RATING_COUNT,
-                    Place.Field.PHOTO_METADATAS
-            );
+        LatLng center = new LatLng(lat, lon);
+        CircularBounds circle = CircularBounds.newInstance(center, 5000);
 
-            LatLng center = new LatLng(lat, lon);
-            CircularBounds circle = CircularBounds.newInstance(center, 5000);
+        SearchNearbyRequest request =
+                SearchNearbyRequest.builder(circle, placeFields)
+                        .setIncludedTypes(includedTypes)
+                        .setMaxResultCount(20)
+                        .setRankPreference(SearchNearbyRequest.RankPreference.DISTANCE)
+                        .build();
 
-            SearchNearbyRequest request =
-                    SearchNearbyRequest.builder(circle, placeFields)
-                            .setIncludedTypes(includedTypes)
-                            .setMaxResultCount(20)
-                            .setRankPreference(SearchNearbyRequest.RankPreference.DISTANCE)
-                            .build();
+        placesClient.searchNearby(request)
+                .addOnSuccessListener(response -> {
 
-            placesClient.searchNearby(request)
-                    .addOnSuccessListener(response -> {
+                    List<Attraction> attractions = new ArrayList<>();
 
-                        List<Attraction> attractions = new ArrayList<>();
-                        AtomicInteger pending = new AtomicInteger(0);
+                    // Single batch write instead of per-item writes + reads
+                    WriteBatch batch = db.batch();
 
-                        List<Place> places = response.getPlaces();
+                    List<Place> places = response.getPlaces();
 
-                        for (Place place : places) {
+                    for (Place place : places) {
 
-                            LatLng placeLoc = place.getLocation();
-                            if (placeLoc == null) continue;
+                        LatLng placeLoc = place.getLocation();
+                        if (placeLoc == null) continue;
 
-                            float[] dist = new float[1];
-                            android.location.Location.distanceBetween(
-                                    userLat, userLon,
-                                    placeLoc.latitude, placeLoc.longitude,
-                                    dist
-                            );
-                            double distanceMeters = dist[0];
+                        float[] dist = new float[1];
+                        android.location.Location.distanceBetween(
+                                lat, lon,          // use search center here
+                                placeLoc.latitude, placeLoc.longitude,
+                                dist
+                        );
+                        double distanceMeters = dist[0];
 
-                            String name = place.getDisplayName();
+                        String name = place.getDisplayName();
+                        if (name == null || name.isEmpty()) name = "Unknown place";
 
+                        String primaryTypeKey = place.getPrimaryType();
+                        String typeLabel = place.getPrimaryTypeDisplayName();
+                        if (typeLabel == null || typeLabel.isEmpty())
+                            typeLabel = primaryTypeKey;
 
-                            if (name == null || name.isEmpty()) name = "Unknown place";
-
-                            String primaryTypeKey = place.getPrimaryType();
-                            String typeLabel = place.getPrimaryTypeDisplayName();
-                            if (typeLabel == null || typeLabel.isEmpty())
-                                typeLabel = primaryTypeKey;
-
-                            PhotoMetadata photoMetadata;
-                            if (place.getPhotoMetadatas() != null &&
-                                    !place.getPhotoMetadatas().isEmpty()) {
-                                photoMetadata = place.getPhotoMetadatas().get(0);
-                            } else {
-                                photoMetadata = null;
-                            }
-
-                            Double rating = place.getRating();
-                            Integer ratingCount = place.getUserRatingCount();
-
-                            String placeId = place.getId();
-
-                            Log.d("WRITE_DEBUG", "Writing: " + placeId + " / name=" + name);
-
-
-                            FirestoreAttraction firestoreAttraction = new FirestoreAttraction(
-                                    placeId,
-                                    name,
-                                    placeLoc.latitude,
-                                    placeLoc.longitude,
-                                    distanceMeters,
-                                    typeLabel,
-                                    primaryTypeKey,
-                                    rating,
-                                    ratingCount
-                            );
-
-                            pending.incrementAndGet();
-
-                            userAttractionsRef()
-                                    .document(placeId)
-                                    .set(firestoreAttraction)
-                                    .addOnSuccessListener(v -> {
-
-                                        Source source = Source.DEFAULT;
-
-                                        userAttractionsRef()
-                                                .document(placeId)
-                                                .get(source)
-                                                .addOnSuccessListener(snapshot -> {
-
-                                                    if (snapshot.exists()) {
-
-                                                        FirestoreAttraction fs =
-                                                                snapshot.toObject(FirestoreAttraction.class);
-
-                                                        Attraction attraction = new Attraction(
-                                                                fs.getName(),
-                                                                fs.getLat(),
-                                                                fs.getLng(),
-                                                                fs.getDistanceMeters(),
-                                                                fs.getTypeLabel(),
-                                                                fs.getPrimaryTypeKey(),
-                                                                fs.getRating(),
-                                                                fs.getRatingCount(),
-                                                                photoMetadata,
-                                                                fs.getId()
-                                                        );
-
-
-
-                                                        synchronized (attractions) {
-                                                            attractions.add(attraction);
-                                                        }
-                                                    }
-
-                                                    if (pending.decrementAndGet() == 0) {
-                                                        finalizeFirestoreAttractions(attractions);
-                                                    }
-                                                });
-                                    });
-
+                        PhotoMetadata photoMetadata = null;
+                        if (place.getPhotoMetadatas() != null &&
+                                !place.getPhotoMetadatas().isEmpty()) {
+                            photoMetadata = place.getPhotoMetadatas().get(0);
                         }
-                    })
-                    .addOnFailureListener(e -> {
-                        e.printStackTrace();
-                        Toast.makeText(getContext(), "Error loading places: " + e.getMessage(),
-                                Toast.LENGTH_SHORT).show();
-                    });
 
-        });
+                        Double rating = place.getRating();
+                        Integer ratingCount = place.getUserRatingCount();
+                        String placeId = place.getId();
+
+                        FirestoreAttraction firestoreAttraction = new FirestoreAttraction(
+                                placeId,
+                                name,
+                                placeLoc.latitude,
+                                placeLoc.longitude,
+                                distanceMeters,
+                                typeLabel,
+                                primaryTypeKey,
+                                rating,
+                                ratingCount
+                        );
+
+                        // Cache in Firestore (for offline) – upsert in batch
+                        DocumentReference ref = userAttractionsRef().document(placeId);
+                        batch.set(ref, firestoreAttraction);
+
+                        // Build in-memory Attraction model directly from what we already have
+                        Attraction attraction = new Attraction(
+                                name,
+                                placeLoc.latitude,
+                                placeLoc.longitude,
+                                distanceMeters,
+                                typeLabel,
+                                primaryTypeKey,
+                                rating,
+                                ratingCount,
+                                photoMetadata,
+                                placeId
+                        );
+                        attractions.add(attraction);
+                    }
+
+                    // Commit cache in background, but UI uses local list immediately
+                    batch.commit()
+                            .addOnSuccessListener(v -> {
+                                Log.d("MAP", "Attractions cached to Firestore");
+                                finalizeFirestoreAttractions(attractions);
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e("MAP", "Failed to cache attractions: " + e.getMessage());
+                                finalizeFirestoreAttractions(attractions); // still update UI
+                            });
+
+                })
+                .addOnFailureListener(e -> {
+                    e.printStackTrace();
+                    if (!isAdded()) return;
+                    Toast.makeText(getContext(),
+                            "Error loading places: " + e.getMessage(),
+                            Toast.LENGTH_SHORT).show();
+                });
     }
 
+    /**
+     * Sorts, loads favorites from Firestore, marks them, then updates UI.
+     */
     private void finalizeFirestoreAttractions(List<Attraction> list) {
 
-        if (!isAdded() || getActivity() == null) return;
+        if (!isAdded() || getActivity() == null) {
+            return;
+        }
 
+        // Sort by distance ascending
         Collections.sort(list, Comparator.comparingDouble(Attraction::getDistanceMeters));
         List<Attraction> top20 = list.subList(0, Math.min(20, list.size()));
 
-        // ⭐ NEW — Load user's favorite IDs
+        // Load favorite IDs for this user and mark them
         db.collection("users")
                 .document(userEmail)
                 .collection("favorites")
@@ -846,84 +837,38 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
                     List<String> favIds = new ArrayList<>();
                     for (DocumentSnapshot d : snapshot.getDocuments()) {
-                        favIds.add(d.getId());        // <-- favorite placeId
+                        favIds.add(d.getId()); // favorite placeId
                     }
 
-                    // ⭐ NEW — Mark favorites before showing UI
-                    markFavorites(top20, favIds);      // <--- IMPORTANT
+                    markFavorites(top20, favIds);
 
-                    // Continue with your normal UI logic
+                    if (!isAdded() || getActivity() == null) return;
+
                     requireActivity().runOnUiThread(() -> {
                         if (!isAdded() || getActivity() == null) return;
 
                         allAttractions.clear();
                         allAttractions.addAll(top20);
+                        applyFiltersAndSorting();
+                    });
+                })
+                .addOnFailureListener(e -> {
+                    // If favorites fail, still show list
+                    if (!isAdded() || getActivity() == null) return;
 
-                        applyFiltersAndSorting();      // hearts now correct
+                    requireActivity().runOnUiThread(() -> {
+                        allAttractions.clear();
+                        allAttractions.addAll(top20);
+                        applyFiltersAndSorting();
                     });
                 });
     }
-    // ⭐ NEW FUNCTION — Marks favorites in the list before sending to adapter
+
+    // Mark favorites on the Attraction objects before feeding them to adapter
     private void markFavorites(List<Attraction> list, List<String> favIds) {
         for (Attraction a : list) {
-            a.setFavorite(favIds.contains(a.getPlaceId()));  // <-- Set flag
+            a.setFavorite(favIds.contains(a.getPlaceId()));
         }
-    }
-
-
-
-
-//    private void finalizeFirestoreAttractions(List<Attraction> list) {
-//
-//        // SAFETY: Fragment is not attached → do nothing
-//        if (!isAdded() || getActivity() == null) {
-//            return;
-//        }
-//
-//        Collections.sort(list, Comparator.comparingDouble(Attraction::getDistanceMeters));
-//
-//        List<Attraction> top20 = list.subList(0, Math.min(20, list.size()));
-//
-//        // On UI thread safely
-//        requireActivity().runOnUiThread(() -> {
-//
-//            // DOUBLE SAFETY — callbacks might fire after UI thread posts again
-//            if (!isAdded() || getActivity() == null) {
-//                return;
-//            }
-//
-//            allAttractions.clear();
-//            allAttractions.addAll(top20);
-//            applyFiltersAndSorting();
-//        });
-//    }
-
-
-    private void clearAttractionsCollection(Runnable onComplete) {
-
-        Source source = Source.DEFAULT;
-
-        userAttractionsRef()
-                .get(source)
-                .addOnSuccessListener(snapshot -> {
-
-                    WriteBatch batch = db.batch();
-
-                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
-                        batch.delete(doc.getReference());
-                    }
-
-                    batch.commit()
-                            .addOnSuccessListener(v -> onComplete.run())
-                            .addOnFailureListener(e -> {
-                                e.printStackTrace();
-                                onComplete.run();
-                            });
-                })
-                .addOnFailureListener(e -> {
-                    e.printStackTrace();
-                    onComplete.run();
-                });
     }
 
     private void loadOfflineAttractions() {
@@ -937,8 +882,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
                     for (DocumentSnapshot doc : snapshot.getDocuments()) {
                         FirestoreAttraction fs = doc.toObject(FirestoreAttraction.class);
+                        if (fs == null) continue;
 
-                        // PhotoMetadata is null in offline mode
                         Attraction a = new Attraction(
                                 fs.getName(),
                                 fs.getLat(),
@@ -959,13 +904,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
                 })
                 .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
                     Toast.makeText(getContext(), "No offline data available", Toast.LENGTH_SHORT).show();
                 });
     }
 
-    /**
-     * Chooses which place types to request, based on the current filter flags.
-     */
     private void requestNearbyForCurrentFilter(double lat, double lon) {
         List<String> types;
 
@@ -988,11 +931,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
+    // ----------------- Cluster dialog -----------------
 
-
-    /**
-     * When a cluster is tapped, show a dialog listing all places inside that cluster.
-     */
     private void showClusterNamesDialog(Cluster<AttractionClusterItem> cluster) {
         if (getContext() == null) return;
 
@@ -1041,9 +981,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 .show();
     }
 
-    /**
-     * Applies type filters and selected sorting mode, then updates list and map clusters.
-     */
+    // ----------------- Filtering / sorting / map update -----------------
+
     private void applyFiltersAndSorting() {
         if (getActivity() == null || mMap == null) return;
 
@@ -1102,9 +1041,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         });
     }
 
-    /**
-     * Wilson score rating that favors places with more reviews.
-     */
+    // Wilson score rating that favors places with more reviews.
     private double computeWeightedRating(Attraction a) {
         Double r = a.getRating();
         Integer v = a.getRatingCount();
@@ -1128,9 +1065,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         return lowerBound * 5.0;
     }
 
-    /**
-     * Combined score for "Best overall": high rating, penalized by distance.
-     */
+    // Combined score for "Best overall": high rating, penalized by distance.
     private double computeCombinedScore(Attraction a) {
         double weightedRating = computeWeightedRating(a);
         if (weightedRating < 0) {
@@ -1143,12 +1078,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         return weightedRating - penalty;
     }
 
-    // Lifecycle
+    // ----------------- Fragment lifecycle -----------------
 
     @Override
     public void onResume() {
         super.onResume();
-        mapView.onResume();
+        if (mapView != null) mapView.onResume();
 
         if (ContextCompat.checkSelfPermission(
                 requireContext(),
@@ -1166,19 +1101,19 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public void onPause() {
         super.onPause();
-        mapView.onPause();
+        if (mapView != null) mapView.onPause();
         fusedLocationClient.removeLocationUpdates(locationCallback);
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        mapView.onDestroy();
+        if (mapView != null) mapView.onDestroy();
     }
 
     @Override
     public void onLowMemory() {
         super.onLowMemory();
-        mapView.onLowMemory();
+        if (mapView != null) mapView.onLowMemory();
     }
 }
