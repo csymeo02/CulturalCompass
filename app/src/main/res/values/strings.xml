@@ -7,6 +7,34 @@
     <string name="hello_blank_fragment">Generated to remove error George</string>
     <string name="google_maps_key">AIzaSyCTpvm5CkW8tpgwsrP9yGHd932X34Ly6bQ</string>
     <string name="gemini_api_key">AIzaSyBOwuU1A0ZdlztgofCYKlqQbqeigQR-o34</string>
+    <string name="cultural_compass_ai">Cultural Compass AI</string>
+    <string name="assistant_placeholder">Ask me anything about landmarks, history, culture, or monuments!</string>
+    <string name="ai_disclaimer">AI can make mistakes — double-check important info.</string>
+    <string name="send_placeholder">Ask me anything...</string>
+    <string name="back">Back</string>
+    <string name="place_name">Place name</string>
+    <string name="description_disclaimer">AI generated description goes here.</string>
+    <string name="description_ai_disclaimer">About this place was AI generated. AI can make mistakes — double-check important info.</string>
+    <string name="no_favorites_yet">No favorites yet</string>
+    <string name="my_favorites">My Favorites</string>
+    <string name="nearby_landmarks">Nearby Landmarks</string>
+    <string name="close_to_you">Close to you</string>
+    <string name="filter">Filter</string>
+    <string name="sort_by">Sort By</string>
+    <string name="create_account">CREATE ACCOUNT</string>
+    <string name="name">Name</string>
+    <string name="surname">Surname</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="verify_password">Verify Password</string>
+    <string name="birthday">Birthday</string>
+    <string name="sign_up">SIGN UP</string>
+    <string name="already_have_account">Already have an account? Login here</string>
+    <string name="ai_assistant_title">AI Assistant</string>
+    <string name="clear">Clear</string>
+    <string name="todo">TODO</string>
+    <string name="type">Type</string>
+    <string name="notifications">Notifications</string>
 
 
 </resources>

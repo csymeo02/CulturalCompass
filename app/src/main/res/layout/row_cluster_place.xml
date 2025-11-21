@@ -25,27 +25,27 @@
             android:id="@+id/txtPlaceName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Place name"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            android:maxLines="2"
             android:ellipsize="end"
-            android:textColor="@android:color/black" />
+            android:maxLines="2"
+            android:text="@string/place_name"
+            android:textColor="@android:color/black"
+            android:textSize="15sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/txtPlaceType"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
+            android:background="@drawable/chip_attraction"
             android:paddingStart="10dp"
-            android:paddingEnd="10dp"
             android:paddingTop="3dp"
+            android:paddingEnd="10dp"
             android:paddingBottom="3dp"
             android:text="Tourist attraction"
-            android:textSize="11sp"
-            android:textStyle="bold"
             android:textColor="@android:color/white"
-            android:background="@drawable/chip_attraction" />
+            android:textSize="11sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
 </LinearLayout>

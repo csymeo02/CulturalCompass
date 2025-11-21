@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="6dp"
+    android:layout_margin="8dp"
     android:background="@drawable/rounded_card"
-    android:layout_margin="8dp">
+    android:orientation="vertical"
+    android:padding="6dp">
 
     <!-- Image -->
     <ImageView
         android:id="@+id/imgFavPhoto"
         android:layout_width="match_parent"
         android:layout_height="150dp"
-        android:scaleType="centerCrop"
         android:background="@drawable/rounded_card"
-        android:clipToOutline="true" />
+        android:clipToOutline="true"
+        android:scaleType="centerCrop" />
 
     <!-- Name -->
     <TextView
@@ -23,37 +23,37 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:text="Place name"
-        android:textStyle="bold"
+        android:ellipsize="end"
         android:maxLines="1"
+        android:text="@string/place_name"
         android:textSize="15sp"
-        android:ellipsize="end" />
+        android:textStyle="bold" />
 
     <!-- Type -->
     <TextView
         android:id="@+id/txtFavType"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Type"
-        android:textSize="13sp"
+        android:layout_marginTop="2dp"
+        android:text="@string/type"
         android:textColor="#666666"
-        android:layout_marginTop="2dp" />
+        android:textSize="13sp" />
 
     <!-- Distance + Heart row -->
     <LinearLayout
-        android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
         <TextView
             android:id="@+id/txtFavDistance"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="342 m"
-            android:textSize="13sp"
-            android:textColor="#333333" />
+            android:textColor="#333333"
+            android:textSize="13sp" />
 
         <View
             android:layout_width="0dp"
@@ -64,10 +64,9 @@
             android:id="@+id/btnUnfavorite"
             android:layout_width="24dp"
             android:layout_height="24dp"
+            android:padding="2dp"
             android:src="@drawable/ic_heart_filled"
-            app:tint="#D32F2F"
-            android:padding="2dp"/>
+            app:tint="#D32F2F" />
     </LinearLayout>
-
 
 </LinearLayout>

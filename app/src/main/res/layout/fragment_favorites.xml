@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#FAFAFA"
+    android:orientation="vertical"
     android:padding="12dp">
 
     <!-- Title -->
@@ -11,10 +12,10 @@
         android:id="@+id/txtTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="My Favorites"
+        android:layout_marginBottom="12dp"
+        android:text="@string/my_favorites"
         android:textSize="28sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="12dp" />
+        android:textStyle="bold" />
 
     <!-- Content container (grid + empty message) -->
     <FrameLayout
@@ -31,32 +32,31 @@
             android:id="@+id/emptyContainer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
             android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical"
             android:visibility="gone">
 
             <ImageView
                 android:id="@+id/emptyHeart"
                 android:layout_width="60dp"
                 android:layout_height="60dp"
+                android:alpha="0.6"
                 android:src="@drawable/ic_heart_outline"
-                app:tint="#AAAAAA"
-                android:alpha="0.6" />
+                app:tint="#AAAAAA" />
 
             <TextView
                 android:id="@+id/txtEmpty"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="No favorites yet"
-                android:textSize="18sp"
-                android:textStyle="bold"
+                android:gravity="center"
                 android:paddingTop="8dp"
+                android:text="@string/no_favorites_yet"
                 android:textColor="#777777"
-                android:gravity="center" />
+                android:textSize="18sp"
+                android:textStyle="bold" />
 
         </LinearLayout>
-
 
     </FrameLayout>
 

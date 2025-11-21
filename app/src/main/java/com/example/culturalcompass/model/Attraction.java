@@ -14,7 +14,7 @@ public class Attraction {
     private Integer ratingCount;
     private boolean favorite;
     private PhotoMetadata photoMetadata;
-    private String placeId;   // 🔥 ADDED
+    private String placeId;   //  ADDED
 
     public Attraction(String name,
                       double lat,
@@ -25,7 +25,7 @@ public class Attraction {
                       Double rating,
                       Integer ratingCount,
                       PhotoMetadata photoMetadata,
-                      String placeId) {   // 🔥 ADDED
+                      String placeId) {   //  ADDED
         this.name = name;
         this.lat = lat;
         this.lng = lng;
@@ -35,7 +35,7 @@ public class Attraction {
         this.rating = rating;
         this.ratingCount = ratingCount;
         this.photoMetadata = photoMetadata;
-        this.placeId = placeId;   // 🔥 ADDED
+        this.placeId = placeId;   //  ADDED
     }
 
     public String getName() { return name; }
