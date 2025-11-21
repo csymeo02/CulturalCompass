@@ -5,7 +5,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
@@ -18,35 +17,19 @@ import com.example.culturalcompass.ui.register.RegisterFragment;
 import com.example.culturalcompass.ui.settings.SettingsFragment;
 import com.example.culturalcompass.ui.splash.SplashFragment;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
 
 public class MainActivity extends AppCompatActivity {
 
     private boolean forceHide = true;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
-    private TextView textGreeting;
-    private FirebaseFirestore db;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
-        View headerView = findViewById(R.id.header);
-        textGreeting = headerView.findViewById(R.id.textGreeting);
-
-        db = FirebaseFirestore.getInstance();
-
-
-        //-------------Greeting with user name-----------
-
-        loadUserNameFromFirestore();
-
-
         BottomNavigationView bottomNavigationView = findViewById(R.id.bottomNavigationView);
+
         // ---------- SETTINGS BUTTON CLICK ----------
         ImageView settingsButton = findViewById(R.id.iconSettings);
         if (settingsButton != null) {
@@ -84,33 +67,6 @@ public class MainActivity extends AppCompatActivity {
             }
             return true;
         });
-    }
-
-
-    private void loadUserNameFromFirestore() {
-        String email = FirebaseAuth.getInstance().getCurrentUser() != null ?
-                FirebaseAuth.getInstance().getCurrentUser().getEmail() : null;
-
-        if (email == null) {
-            textGreeting.setText("Hello");
-            return;
-        }
-
-        db.collection("users")
-                .document(email)
-                .get()
-                .addOnSuccessListener(doc -> {
-                    if (doc.exists()) {
-                        String name = doc.getString("name");
-
-                        if (name == null || name.isEmpty()) {
-                            name = "User";
-                        }
-
-                        textGreeting.setText("Hello, " + name);
-                    }
-                })
-                .addOnFailureListener(e -> textGreeting.setText("Hello"));
     }
 
     // --- UI Visibility Control -----------------------------------------------
