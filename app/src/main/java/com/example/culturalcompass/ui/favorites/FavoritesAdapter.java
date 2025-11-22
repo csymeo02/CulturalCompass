@@ -23,6 +23,8 @@ import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import com.google.android.material.snackbar.Snackbar;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -143,6 +145,13 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Hold
                     .document(a.getId())
                     .delete()
                     .addOnSuccessListener(x -> {
+
+                        Toast.makeText(
+                                v.getContext(),
+                                "Removed: " + a.getName(),
+                                Toast.LENGTH_SHORT
+                        ).show();
+
                         items.remove(index);
                         notifyItemRemoved(index);
 

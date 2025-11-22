@@ -12,10 +12,11 @@
         android:id="@+id/txtTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
+        android:layout_marginBottom="16dp"
         android:text="@string/my_favorites"
-        android:textSize="28sp"
-        android:textStyle="bold" />
+        android:textSize="26sp"
+        android:textStyle="bold"
+        android:textColor="#111" />
 
     <!-- Content container (grid + empty message) -->
     <FrameLayout

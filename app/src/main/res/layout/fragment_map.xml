@@ -6,17 +6,18 @@
     android:background="#FAFAFA"
     android:orientation="vertical">
 
-    <!-- Map Section with floating search bar -->
+    <!-- MAP SECTION -->
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="300dp"
+        android:layout_height="260dp"
         android:layout_margin="8dp">
 
-        <!-- Card containing the map -->
+        <!-- MAP CARD -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            app:cardCornerRadius="16dp">
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp">
 
             <com.google.android.gms.maps.MapView
                 android:id="@+id/map"
@@ -27,24 +28,24 @@
         <!-- FLOATING SEARCH BAR -->
         <EditText
             android:id="@+id/searchBar"
-            android:layout_width="250dp"
+            android:layout_width="280dp"
             android:layout_height="42dp"
             android:layout_gravity="top|start"
-            android:layout_marginStart="20dp"
-            android:layout_marginTop="10dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="12dp"
             android:background="@drawable/bg_search_transparent"
-            android:drawableLeft="@drawable/ic_search"
+            android:drawableStart="@drawable/ic_search"
             android:drawablePadding="10dp"
-            android:elevation="10dp"
+            android:elevation="8dp"
             android:hint="Search places"
-            android:paddingHorizontal="14dp"
-            android:paddingVertical="8dp"
+            android:paddingHorizontal="16dp"
             android:textColor="#000"
             android:textSize="14sp" />
+
     </FrameLayout>
 
 
-    <!-- Header: title + filter/sort controls -->
+    <!-- HEADER: Nearby Landmarks -->
     <LinearLayout
         android:id="@+id/layoutHeaderNearby"
         android:layout_width="match_parent"
@@ -52,10 +53,10 @@
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingHorizontal="12dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="4dp">
+        android:paddingTop="12dp"
+        android:paddingBottom="8dp">
 
-        <!-- Title block (title + subtitle) -->
+        <!-- Title block -->
         <LinearLayout
             android:id="@+id/layoutNearbyTitle"
             android:layout_width="0dp"
@@ -69,7 +70,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/nearby_landmarks"
                 android:textColor="#111111"
-                android:textSize="18sp"
+                android:textSize="19sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -82,18 +83,18 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
-        <!-- FILTER BLOCK with label over border -->
+        <!-- FILTER -->
         <RelativeLayout
             android:id="@+id/layoutFilter"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="6dp"
             android:layout_weight="1">
 
             <Spinner
                 android:id="@+id/spinnerFilter"
                 android:layout_width="match_parent"
-                android:layout_height="36dp"
+                android:layout_height="34dp"
                 android:layout_marginTop="6dp"
                 android:background="@drawable/spinner_outline_bg"
                 android:paddingHorizontal="10dp"
@@ -113,24 +114,23 @@
                 android:translationY="-8dp" />
         </RelativeLayout>
 
-        <!-- SORT BLOCK with label over border -->
+        <!-- SORT -->
         <RelativeLayout
             android:id="@+id/layoutSort"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="6dp"
             android:layout_weight="1">
 
             <Spinner
                 android:id="@+id/spinnerSort"
                 android:layout_width="match_parent"
-                android:layout_height="36dp"
+                android:layout_height="34dp"
                 android:layout_marginTop="6dp"
                 android:background="@drawable/spinner_outline_bg"
                 android:paddingHorizontal="10dp"
                 android:spinnerMode="dropdown" />
 
-            <!-- Label sitting on top of the border -->
             <TextView
                 android:id="@+id/labelSortBy"
                 android:layout_width="wrap_content"
@@ -147,12 +147,14 @@
 
     </LinearLayout>
 
-    <!-- List of nearest attractions -->
+    <!-- RECYCLER -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerNearby"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:padding="8dp" />
+        android:padding="8dp"
+        android:clipToPadding="false"
+        android:paddingTop="4dp" />
 
 </LinearLayout>
