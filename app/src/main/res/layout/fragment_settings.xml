@@ -1,291 +1,203 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:fillViewport="true"
     android:background="@color/beige">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+    <LinearLayout
+        android:id="@+id/settingsContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="20dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
-        <LinearLayout
-            android:id="@+id/settingsContainer"
-            android:layout_width="0dp"
+        <!-- TITLE -->
+        <TextView
+            android:id="@+id/tvSettingsTitle"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="20dp"
-            android:gravity="center_horizontal"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent">
+            android:layout_marginBottom="18dp"
+            android:fontFamily="sans-serif-medium"
+            android:text="Settings"
+            android:textColor="#004E7A"
+            android:textSize="26sp" />
 
-            <!-- SETTINGS TITLE -->
+        <!-- SECTION: ACCOUNT -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:text="Account"
+            android:textColor="#555"
+            android:textSize="14sp" />
+
+        <Button
+            android:id="@+id/btnPersonalInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="18dp"
+            android:backgroundTint="@color/primary"
+            android:minHeight="52dp"
+            android:paddingVertical="12dp"
+            android:text="Personal Info"
+            android:textColor="@android:color/white" />
+
+        <!-- SECTION: PREFERENCES -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:text="Preferences"
+            android:textColor="#555"
+            android:textSize="14sp" />
+
+        <!-- NOTIFICATIONS -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/settings_item_bg"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="12dp">
+
             <TextView
-                android:id="@+id/tvSettingsTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Enable Notifications"
+                android:textSize="18sp" />
+
+            <Switch
+                android:id="@+id/switchNotifications"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Settings"
-                android:textSize="26sp"
-                android:textColor="#004E7A"
-                android:fontFamily="sans-serif-medium"
-                android:layout_marginBottom="24dp"/>
-
-            <!-- PERSONAL INFO BUTTON -->
-            <Button
-                android:id="@+id/btnPersonalInfo"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Personal Info"
-                android:backgroundTint="@color/primary"
-                android:textColor="@android:color/white"
-                android:layout_marginBottom="24dp"/>
-
-            <!-- NOTIFICATIONS -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp"
-                android:background="@drawable/settings_item_bg">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Enable Notifications"
-                    android:textSize="18sp"/>
-
-                <Switch
-                    android:id="@+id/switchNotifications"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
-            </LinearLayout>
-
-            <!-- DARK MODE -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/settings_item_bg">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Dark Mode"
-                    android:textSize="18sp"/>
-
-                <Switch
-                    android:id="@+id/switchDarkMode"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
-            </LinearLayout>
-
-            <!-- LOCATION -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/settings_item_bg">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Location Services"
-                    android:textSize="18sp"/>
-
-                <Switch
-                    android:id="@+id/switchLocation"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
-            </LinearLayout>
-
-            <!-- AUTO SYNC -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/settings_item_bg">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Auto Sync Data"
-                    android:textSize="18sp"/>
-
-                <Switch
-                    android:id="@+id/switchAutoSync"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
-            </LinearLayout>
-
-            <!-- LOGOUT BUTTON -->
-            <Button
-                android:id="@+id/btnLogout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Logout"
-                android:backgroundTint="@color/primary"
-                android:textColor="@android:color/white"
-                android:layout_marginTop="40dp"/>
-
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
         </LinearLayout>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
-</ScrollView>
+        <!-- DARK MODE -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/settings_item_bg"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="12dp">
 
-    <!--<?xml version="1.0" encoding="utf-8"?>-->
-    <!--<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"-->
-    <!--    android:layout_width="match_parent"-->
-    <!--    android:layout_height="match_parent"-->
-    <!--    xmlns:app="http://schemas.android.com/apk/res-auto"-->
-    <!--    android:fillViewport="true"-->
-    <!--    android:background="@color/beige">-->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Dark Mode"
+                android:textSize="18sp" />
 
-    <!--    <androidx.constraintlayout.widget.ConstraintLayout-->
-    <!--        android:layout_width="match_parent"-->
-    <!--        android:layout_height="wrap_content">-->
+            <Switch
+                android:id="@+id/switchDarkMode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
+        </LinearLayout>
 
-    <!--        <LinearLayout-->
-    <!--            android:id="@+id/settingsContainer"-->
-    <!--            android:layout_width="0dp"-->
-    <!--            android:layout_height="wrap_content"-->
-    <!--            android:orientation="vertical"-->
-    <!--            android:padding="20dp"-->
-    <!--            android:gravity="center_horizontal"-->
-    <!--            app:layout_constraintTop_toTopOf="parent"-->
-    <!--            app:layout_constraintBottom_toBottomOf="parent"-->
-    <!--            app:layout_constraintStart_toStartOf="parent"-->
-    <!--            app:layout_constraintEnd_toEndOf="parent">-->
+        <!-- LOCATION -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/settings_item_bg"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="12dp">
 
-    <!--            &lt;!&ndash; SETTINGS TITLE &ndash;&gt;-->
-    <!--            <TextView-->
-    <!--                android:id="@+id/tvSettingsTitle"-->
-    <!--                android:layout_width="wrap_content"-->
-    <!--                android:layout_height="wrap_content"-->
-    <!--                android:text="Settings"-->
-    <!--                android:textSize="26sp"-->
-    <!--                android:textColor="#004E7A"-->
-    <!--                android:fontFamily="sans-serif-medium"-->
-    <!--                android:layout_marginBottom="24dp"/>-->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Location Services"
+                android:textSize="18sp" />
 
-    <!--            &lt;!&ndash; NOTIFICATIONS &ndash;&gt;-->
-    <!--            <LinearLayout-->
-    <!--                android:layout_width="match_parent"-->
-    <!--                android:layout_height="wrap_content"-->
-    <!--                android:orientation="horizontal"-->
-    <!--                android:gravity="center_vertical"-->
-    <!--                android:padding="12dp"-->
-    <!--                android:background="@drawable/settings_item_bg">-->
+            <Switch
+                android:id="@+id/switchLocation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
 
-    <!--                <TextView-->
-    <!--                    android:layout_width="0dp"-->
-    <!--                    android:layout_height="wrap_content"-->
-    <!--                    android:layout_weight="1"-->
-    <!--                    android:text="Enable Notifications"-->
-    <!--                    android:textSize="18sp"/>-->
+        <!-- AUTO SYNC -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/settings_item_bg"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="12dp">
 
-    <!--                <Switch-->
-    <!--                    android:id="@+id/switchNotifications"-->
-    <!--                    android:layout_width="wrap_content"-->
-    <!--                    android:layout_height="wrap_content"/>-->
-    <!--            </LinearLayout>-->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Auto Sync Data"
+                android:textSize="18sp" />
 
-    <!--            &lt;!&ndash; DARK MODE &ndash;&gt;-->
-    <!--            <LinearLayout-->
-    <!--                android:layout_width="match_parent"-->
-    <!--                android:layout_height="wrap_content"-->
-    <!--                android:orientation="horizontal"-->
-    <!--                android:gravity="center_vertical"-->
-    <!--                android:padding="12dp"-->
-    <!--                android:layout_marginTop="12dp"-->
-    <!--                android:background="@drawable/settings_item_bg">-->
+            <Switch
+                android:id="@+id/switchAutoSync"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
+        </LinearLayout>
 
-    <!--                <TextView-->
-    <!--                    android:layout_width="0dp"-->
-    <!--                    android:layout_height="wrap_content"-->
-    <!--                    android:layout_weight="1"-->
-    <!--                    android:text="Dark Mode"-->
-    <!--                    android:textSize="18sp"/>-->
+        <!-- SECTION: INFO -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="4dp"
+            android:text="App Info"
+            android:textColor="#555"
+            android:textSize="14sp" />
 
-    <!--                <Switch-->
-    <!--                    android:id="@+id/switchDarkMode"-->
-    <!--                    android:layout_width="wrap_content"-->
-    <!--                    android:layout_height="wrap_content"/>-->
-    <!--            </LinearLayout>-->
+        <LinearLayout
+            android:id="@+id/aboutUsButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:orientation="horizontal"
+            android:background="@drawable/settings_item_bg"
+            android:gravity="center_vertical"
+            android:foreground="?attr/selectableItemBackground">
 
-    <!--            &lt;!&ndash; LOCATION &ndash;&gt;-->
-    <!--            <LinearLayout-->
-    <!--                android:layout_width="match_parent"-->
-    <!--                android:layout_height="wrap_content"-->
-    <!--                android:orientation="horizontal"-->
-    <!--                android:gravity="center_vertical"-->
-    <!--                android:padding="12dp"-->
-    <!--                android:layout_marginTop="12dp"-->
-    <!--                android:background="@drawable/settings_item_bg">-->
+        <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="About Us"
+                android:textSize="18sp"
+                android:textStyle="bold" />
 
-    <!--                <TextView-->
-    <!--                    android:layout_width="0dp"-->
-    <!--                    android:layout_height="wrap_content"-->
-    <!--                    android:layout_weight="1"-->
-    <!--                    android:text="Location Services"-->
-    <!--                    android:textSize="18sp"/>-->
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/gs_arrow_forward_ios_vd_20"
+                app:tint="#333" />
+        </LinearLayout>
 
-    <!--                <Switch-->
-    <!--                    android:id="@+id/switchLocation"-->
-    <!--                    android:layout_width="wrap_content"-->
-    <!--                    android:layout_height="wrap_content"/>-->
-    <!--            </LinearLayout>-->
+        <!-- LOGOUT BUTTON -->
+        <Button
+            android:id="@+id/btnLogout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:backgroundTint="@color/primary"
+            android:minHeight="52dp"
+            android:paddingVertical="12dp"
+            android:text="Logout"
+            android:textColor="@android:color/white" />
 
-    <!--            &lt;!&ndash; AUTO SYNC &ndash;&gt;-->
-    <!--            <LinearLayout-->
-    <!--                android:layout_width="match_parent"-->
-    <!--                android:layout_height="wrap_content"-->
-    <!--                android:orientation="horizontal"-->
-    <!--                android:gravity="center_vertical"-->
-    <!--                android:padding="12dp"-->
-    <!--                android:layout_marginTop="12dp"-->
-    <!--                android:background="@drawable/settings_item_bg">-->
+    </LinearLayout>
 
-    <!--                <TextView-->
-    <!--                    android:layout_width="0dp"-->
-    <!--                    android:layout_height="wrap_content"-->
-    <!--                    android:layout_weight="1"-->
-    <!--                    android:text="Auto Sync Data"-->
-    <!--                    android:textSize="18sp"/>-->
-
-    <!--                <Switch-->
-    <!--                    android:id="@+id/switchAutoSync"-->
-    <!--                    android:layout_width="wrap_content"-->
-    <!--                    android:layout_height="wrap_content"/>-->
-    <!--            </LinearLayout>-->
-
-    <!--            &lt;!&ndash; LOGOUT BUTTON &ndash;&gt;-->
-    <!--            <Button-->
-    <!--                android:id="@+id/btnLogout"-->
-    <!--                android:layout_width="match_parent"-->
-    <!--                android:layout_height="wrap_content"-->
-    <!--                android:text="Logout"-->
-    <!--                android:backgroundTint="@color/primary"-->
-    <!--                android:textColor="@android:color/white"-->
-    <!--                android:layout_marginTop="40dp"/>-->
-
-    <!--        </LinearLayout>-->
-
-    <!--    </androidx.constraintlayout.widget.ConstraintLayout>-->
-    <!--</ScrollView>-->
+</androidx.constraintlayout.widget.ConstraintLayout>

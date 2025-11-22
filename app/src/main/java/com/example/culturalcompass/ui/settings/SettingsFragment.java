@@ -4,6 +4,7 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.*;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.Switch;
 import android.widget.Toast;
 
@@ -13,6 +14,7 @@ import androidx.fragment.app.Fragment;
 
 import com.example.culturalcompass.MainActivity;
 import com.example.culturalcompass.R;
+import com.example.culturalcompass.ui.aboutus.AboutUsFragment;
 import com.example.culturalcompass.ui.login.LoginFragment;
 import com.example.culturalcompass.ui.profile.UserViewInfoFragment;   // ⭐ ADDED
 import com.google.firebase.auth.FirebaseAuth;
@@ -61,6 +63,17 @@ public class SettingsFragment extends Fragment {
         switchDarkMode.setOnCheckedChangeListener((b, checked) -> save("darkMode", checked));
         switchLocation.setOnCheckedChangeListener((b, checked) -> save("location", checked));
         switchAutoSync.setOnCheckedChangeListener((b, checked) -> save("autoSync", checked));
+
+        LinearLayout aboutUs = v.findViewById(R.id.aboutUsButton);
+
+        aboutUs.setOnClickListener(x -> {
+            requireActivity().getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.flFragment, new AboutUsFragment())
+                    .addToBackStack(null)
+                    .commit();
+        });
+
 
         // ---- Logout ----
         btnLogout.setOnClickListener(view -> logout());
