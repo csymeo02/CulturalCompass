@@ -2,7 +2,6 @@ package com.example.culturalcompass.ui.assistant;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,8 +19,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.culturalcompass.R;
 import com.example.culturalcompass.model.Message;
 import com.example.culturalcompass.model.Session;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -62,7 +59,6 @@ public class AIAssistantFragment extends Fragment {
     private final OkHttpClient client = new OkHttpClient();
 
     private LinearLayout emptyState;
-
 
 
     @Override
@@ -155,8 +151,6 @@ public class AIAssistantFragment extends Fragment {
         });
     }
 
-
-
     private void showClearDialog() {
         new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Clear Chat History?")
@@ -169,7 +163,6 @@ public class AIAssistantFragment extends Fragment {
                 })
                 .show();
     }
-
 
     @SuppressLint("NotifyDataSetChanged")
     private void clearChat() {
@@ -185,7 +178,6 @@ public class AIAssistantFragment extends Fragment {
 
         stopTyping = true;
     }
-
 
     private void setupSendListener() {
         sendButton.setOnClickListener(v -> {
@@ -205,7 +197,6 @@ public class AIAssistantFragment extends Fragment {
         });
     }
 
-
     private void addSystemContextMessage() {
         try {
             JSONObject sys = new JSONObject();
@@ -215,9 +206,11 @@ public class AIAssistantFragment extends Fragment {
             JSONObject txt = new JSONObject();
 
             txt.put("text",
-                    "You are Cultural Compass, an AI cultural guide. " +
-                            "The name of the user is " + Session.currentUsername + ". " +
-                            "Rules: No asterisks, no markdown, plain text only, short and friendly."
+                    "You are Cultural Compass, a friendly assistant helping the user. " +
+                            "The user’s name is " + Session.currentUsername + ". " +
+                            "Use plain text only (no asterisks, no markdown, no emojis). " +
+                            "Keep replies short, clear, and casual. " +
+                            "Explain things simply and help with any topic."
             );
 
 
@@ -230,14 +223,12 @@ public class AIAssistantFragment extends Fragment {
         }
     }
 
-
     private void addMessageToUI(Message msg) {
         emptyState.setVisibility(View.GONE);
         messages.add(msg);
         chatAdapter.notifyItemInserted(messages.size() - 1);
         chatRecycler.smoothScrollToPosition(messages.size() - 1);
     }
-
 
     @SuppressLint("NotifyDataSetChanged")
     private void showTypingBubble() {
@@ -274,7 +265,6 @@ public class AIAssistantFragment extends Fragment {
         }).start();
     }
 
-
     private void sendMessageToGemini(String userMsg) {
 
         try {
@@ -290,6 +280,22 @@ public class AIAssistantFragment extends Fragment {
             userObj.put("parts", userParts);
 
             conversationHistory.add(userObj);
+
+            try {
+                JSONObject rule = new JSONObject();
+                rule.put("role", "model");
+
+                JSONArray parts = new JSONArray();
+                JSONObject reinforce = new JSONObject();
+                reinforce.put("text",
+                        "Remember: reply in plain text only, no markdown, no asterisks, no emojis.");
+                parts.put(reinforce);
+
+                rule.put("parts", parts);
+                conversationHistory.add(rule);
+
+            } catch (Exception ignored) {}
+
 
         } catch (Exception ignored) {
             addMessageToUI(new Message(Message.ASSISTANT, "JSON error."));
@@ -345,7 +351,6 @@ public class AIAssistantFragment extends Fragment {
         });
     }
 
-
     @SuppressLint("NotifyDataSetChanged")
     private void removeTypingBubble() {
         int lastIndex = messages.size() - 1;
@@ -354,7 +359,6 @@ public class AIAssistantFragment extends Fragment {
             chatAdapter.notifyDataSetChanged();
         }
     }
-
 
     private void addReplyToConversationHistory(String reply) {
         try {
@@ -374,7 +378,6 @@ public class AIAssistantFragment extends Fragment {
         }
     }
 
-
     private String parseReply(String json) {
         try {
             JSONObject obj = new JSONObject(json);
@@ -388,7 +391,6 @@ public class AIAssistantFragment extends Fragment {
             return "Something went wrong. Try again.";
         }
     }
-
 
     @Override
     public void onDestroyView() {
