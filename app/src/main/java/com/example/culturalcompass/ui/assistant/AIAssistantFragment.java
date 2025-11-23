@@ -281,21 +281,6 @@ public class AIAssistantFragment extends Fragment {
 
             conversationHistory.add(userObj);
 
-            try {
-                JSONObject rule = new JSONObject();
-                rule.put("role", "model");
-
-                JSONArray parts = new JSONArray();
-                JSONObject reinforce = new JSONObject();
-                reinforce.put("text",
-                        "Remember: reply in plain text only, no markdown, no asterisks, no emojis.");
-                parts.put(reinforce);
-
-                rule.put("parts", parts);
-                conversationHistory.add(rule);
-
-            } catch (Exception ignored) {}
-
 
         } catch (Exception ignored) {
             addMessageToUI(new Message(Message.ASSISTANT, "JSON error."));
