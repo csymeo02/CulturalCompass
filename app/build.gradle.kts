@@ -47,17 +47,13 @@ dependencies {
     implementation(libs.google.maps)
     implementation(libs.android.maps.utils)
     implementation (libs.places)
-    implementation("androidx.core:core-splashscreen:1.0.1")
-
+    implementation(libs.core.splashscreen)
     implementation(libs.okhttp)
     implementation(libs.logging.interceptor)
     //  Firebase (Lab07)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)
-    implementation(libs.firebase.analytics)
-    implementation(libs.firebase.storage)
     implementation(libs.firebase.messaging)
-    implementation(libs.firebase.inappmessaging)
     implementation(libs.firebase.auth)
 
 
