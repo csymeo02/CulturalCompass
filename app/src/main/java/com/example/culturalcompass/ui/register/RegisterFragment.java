@@ -135,6 +135,11 @@ public class RegisterFragment extends Fragment {
             return;
         }
 
+        if (pass.length()< 6) {
+            Toast.makeText(getContext(), "Passwords less than 6 characters", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         Date birthdate;
         try {
             birthdate = dateFormat.parse(birthdayStr);
