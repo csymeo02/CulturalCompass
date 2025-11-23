@@ -1,199 +1,176 @@
 package com.example.culturalcompass.ui.favorites;
 
-import android.content.Context;                                     // used for connectivity check
-import android.net.ConnectivityManager;                             // for isOnline()
-import android.net.NetworkInfo;                                     // for isOnline()
-import android.os.Bundle;                                           // fragment state
-import android.view.LayoutInflater;                                 // inflate layout
-import android.view.View;                                           // root views
-import android.view.ViewGroup;                                      // container
-import android.widget.TextView;                                     // empty text
-import android.widget.Toast;                                        // toasts
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
+import android.widget.Toast;
 
-import androidx.annotation.NonNull;                                 // annotations
-import androidx.annotation.Nullable;                                // annotations
-import androidx.fragment.app.Fragment;                              // base fragment
-import androidx.recyclerview.widget.GridLayoutManager;              // grid layout
-import androidx.recyclerview.widget.RecyclerView;                   // recycler view
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.culturalcompass.MainActivity;                    // to use static placesClient
-import com.example.culturalcompass.R;                               // resources
-import com.example.culturalcompass.model.FirestoreAttraction;       // favorite model
-import com.example.culturalcompass.ui.description.DescriptionFragment; // description screen
-import com.google.firebase.auth.FirebaseAuth;                        // Firebase Auth
-import com.google.firebase.auth.FirebaseUser;                        // current user
-import com.google.firebase.firestore.DocumentSnapshot;              // Firestore docs
-import com.google.firebase.firestore.FirebaseFirestore;             // Firestore
+import com.example.culturalcompass.MainActivity;
+import com.example.culturalcompass.R;
+import com.example.culturalcompass.model.FirestoreAttraction;
+import com.example.culturalcompass.ui.description.DescriptionFragment;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 
-import org.json.JSONArray;                                         // JSON array
-import org.json.JSONObject;                                        // JSON object
+import org.json.JSONArray;
+import org.json.JSONObject;
 
-import java.io.IOException;                                        // network errors
-import java.util.ArrayList;                                        // list impl
-import java.util.List;                                             // list interface
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
-import okhttp3.Callback;                                           // OkHttp async callback
-import okhttp3.MediaType;                                          // request content type
-import okhttp3.OkHttpClient;                                       // HTTP client
-import okhttp3.Request;                                            // HTTP request
-import okhttp3.RequestBody;                                        // HTTP body
-import okhttp3.Response;                                           // HTTP response
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class FavoritesFragment extends Fragment {
 
-    private RecyclerView recycler;                                  // grid of favorite cards
-    private FavoritesAdapter adapter;                               // adapter for favorites
-    private FirebaseFirestore db;                                   // Firestore instance
-    private String email;                                           // current user's email
+    private RecyclerView recycler;
+    private FavoritesAdapter adapter;
+    private FirebaseFirestore db;
+    private String email;
 
-    private View emptyContainer;                                    // layout for empty state
-    private TextView txtEmpty;                                      // text inside empty state
+    private View emptyContainer;
+    private TextView txtEmpty;
 
+    @SuppressLint("SetTextI18n")
     @Nullable
     @Override
-    public View onCreateView(
-            @NonNull LayoutInflater inflater,                       // inflater
-            @Nullable ViewGroup container,                          // parent container
-            @Nullable Bundle savedInstanceState                     // saved state
-    ) {
-        View v = inflater.inflate(R.layout.fragment_favorites, container, false); // inflate UI
+    public View onCreateView(@NonNull LayoutInflater inflater,
+                             @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
 
-        recycler = v.findViewById(R.id.recyclerFavorites);          // find recycler
-        recycler.setLayoutManager(new GridLayoutManager(getContext(), 2)); // 2-column grid
+        View v = inflater.inflate(R.layout.fragment_favorites, container, false);
 
-        emptyContainer = v.findViewById(R.id.emptyContainer);       // empty state container
-        txtEmpty = v.findViewById(R.id.txtEmpty);                   // empty state text
+        recycler = v.findViewById(R.id.recyclerFavorites);
+        recycler.setLayoutManager(new GridLayoutManager(getContext(), 2));
 
-        // Use the static PlacesClient created in MainActivity
-        adapter = new FavoritesAdapter(new ArrayList<>(), MainActivity.placesClient); // adapter with empty list
-        recycler.setAdapter(adapter);                               // attach adapter
+        emptyContainer = v.findViewById(R.id.emptyContainer);
+        txtEmpty = v.findViewById(R.id.txtEmpty);
 
-        // When the last item is removed -> show empty state
-        adapter.setEmptyListener(() -> emptyContainer.setVisibility(View.VISIBLE));   // callback
+        adapter = new FavoritesAdapter(new ArrayList<>(), MainActivity.placesClient);
+        recycler.setAdapter(adapter);
 
-        // When user taps a favorite card -> request AI description and open DescriptionFragment
-        adapter.setOnFavoriteClickListener(this::requestAIDescriptionAndOpen);       // click callback
+        adapter.setEmptyListener(() -> emptyContainer.setVisibility(View.VISIBLE));
+        adapter.setOnFavoriteClickListener(this::requestAIDescriptionAndOpen);
 
-        db = FirebaseFirestore.getInstance();                       // init Firestore
+        db = FirebaseFirestore.getInstance();
 
-        // -------- FirebaseAuth instead of Session.currentUser --------
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser(); // get current user
-        if (user == null) {                                         // if no user (safety)
-            emptyContainer.setVisibility(View.VISIBLE);             // show empty state
-            txtEmpty.setText("Please log in to see your favorites."); // optional message
-            return v;                                               // stop here
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            emptyContainer.setVisibility(View.VISIBLE);
+            txtEmpty.setText("Please log in to see your favorites.");
+            return v;
         }
 
-        email = user.getEmail();                                    // get email for Firestore
-        if (email == null) {                                        // extra safety
-            emptyContainer.setVisibility(View.VISIBLE);             // show empty state
-            txtEmpty.setText("Could not load favorites (no email)."); // message
-            return v;                                               // stop
+        email = user.getEmail();
+        if (email == null) {
+            emptyContainer.setVisibility(View.VISIBLE);
+            txtEmpty.setText("Could not load favorites.");
+            return v;
         }
 
-        loadFavorites();                                            // load favorites from Firestore
-
-        return v;                                                   // return root view
+        loadFavorites();
+        return v;
     }
 
-    // ------------------- Connectivity helper -------------------
     private boolean isOnline() {
         ConnectivityManager cm =
-                (ConnectivityManager) requireContext()
-                        .getSystemService(Context.CONNECTIVITY_SERVICE); // get connectivity service
-        NetworkInfo netInfo = cm.getActiveNetworkInfo();                 // active network
-        return netInfo != null && netInfo.isConnected();                 // true if connected
+                (ConnectivityManager) requireContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo net = cm.getActiveNetworkInfo();
+        return net != null && net.isConnected();
     }
 
-    // ------------------- Load favorites list -------------------
     private void loadFavorites() {
-        db.collection("users")                                        // users collection
-                .document(email)                                      // current user doc
-                .collection("favorites")                              // favorites subcollection
+        db.collection("users")
+                .document(email)
+                .collection("favorites")
                 .get()
-                .addOnSuccessListener(snapshot -> {                   // when Firestore returns
+                .addOnSuccessListener(snapshot -> {
 
-                    List<FirestoreAttraction> list = new ArrayList<>(); // temp list
-
-                    for (DocumentSnapshot doc : snapshot.getDocuments()) { // loop docs
-                        FirestoreAttraction fa = doc.toObject(FirestoreAttraction.class); // map
-                        if (fa != null) list.add(fa);                  // add if not null
+                    List<FirestoreAttraction> list = new ArrayList<>();
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        FirestoreAttraction fa = doc.toObject(FirestoreAttraction.class);
+                        if (fa != null) list.add(fa);
                     }
 
-                    // -------- Sort as in their version (rating + count) --------
                     list.sort((a, b) -> {
+                        int countA = a.getRatingCount() != null ? a.getRatingCount() : 0;
+                        int countB = b.getRatingCount() != null ? b.getRatingCount() : 0;
 
-                        int countA = a.getRatingCount() != null ? a.getRatingCount() : 0; // reviews A
-                        int countB = b.getRatingCount() != null ? b.getRatingCount() : 0; // reviews B
+                        boolean aValid = countA >= 2;
+                        boolean bValid = countB >= 2;
 
-                        boolean aValid = countA >= 2;                 // A has enough reviews?
-                        boolean bValid = countB >= 2;                 // B has enough reviews?
-
-                        // Those with >=2 reviews go first
                         if (aValid && !bValid) return -1;
                         if (!aValid && bValid) return 1;
 
-                        double ratingA = a.getRating() != null ? a.getRating() : 0.0; // rating A
-                        double ratingB = b.getRating() != null ? b.getRating() : 0.0; // rating B
+                        double ratingA = a.getRating() != null ? a.getRating() : 0.0;
+                        double ratingB = b.getRating() != null ? b.getRating() : 0.0;
 
-                        int cmp = Double.compare(ratingB, ratingA);   // higher rating first
-                        if (cmp != 0) return cmp;                     // if different, done
+                        int cmp = Double.compare(ratingB, ratingA);
+                        if (cmp != 0) return cmp;
 
-                        return Integer.compare(countB, countA);       // else by review count
+                        return Integer.compare(countB, countA);
                     });
 
-                    adapter.update(list);                              // push into adapter
-
-                    // show / hide empty layout
+                    adapter.update(list);
                     emptyContainer.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
                 });
     }
 
-    // ------------------- AI description + navigation -------------------
     private void requestAIDescriptionAndOpen(FirestoreAttraction a) {
 
-        // 1) If no internet -> just open Description without AI text
         if (!isOnline()) {
-            Toast.makeText(requireContext(),
-                    "Failed to load description",
-                    Toast.LENGTH_SHORT
-            ).show();
-
-            openDescriptionFragment(a, "");                           // open with empty AI text
-            return;                                                  // stop here
+            Toast.makeText(requireContext(), "Failed to load description", Toast.LENGTH_SHORT).show();
+            openDescriptionFragment(a, "");
+            return;
         }
 
-        // 2) Build Gemini prompt
         String prompt =
                 "Give me a short friendly explanation (3–5 sentences, no markdown) "
                         + "about this place: " + a.getName() + ". "
                         + "It is a " + a.getTypeLabel() + ". "
-                        + "If the place is well-known or historically important, include useful background and key details. "
-                        + "If it's small or local, keep the description simple and experience-based. "
-                        + "Do NOT mention coordinates or country names.";
+                        + "If well-known, include background. "
+                        + "If small, keep it simple. "
+                        + "No coordinates or country names.";
 
-        JSONObject body = new JSONObject();                          // root JSON
+        JSONObject body = new JSONObject();
         try {
-            JSONArray contents = new JSONArray();                    // contents array
+            JSONArray contents = new JSONArray();
+            JSONObject userObj = new JSONObject();
+            userObj.put("role", "user");
 
-            JSONObject userObj = new JSONObject();                   // single user message
-            userObj.put("role", "user");                             // role = user
+            JSONArray parts = new JSONArray();
+            JSONObject text = new JSONObject();
+            text.put("text", prompt);
+            parts.put(text);
 
-            JSONArray parts = new JSONArray();                       // parts array
-            JSONObject text = new JSONObject();                      // text object
-            text.put("text", prompt);                                // put prompt text
-            parts.put(text);                                         // add to parts
-
-            userObj.put("parts", parts);                             // attach parts to user obj
-            contents.put(userObj);                                   // add user obj to contents
-
-            body.put("contents", contents);                          // set contents in body
+            userObj.put("parts", parts);
+            contents.put(userObj);
+            body.put("contents", contents);
 
         } catch (Exception e) {
-            e.printStackTrace();                                     // log error
+            e.printStackTrace();
         }
 
-        RequestBody reqBody = RequestBody.create(                    // OkHttp request body
+        RequestBody reqBody = RequestBody.create(
                 body.toString(),
                 MediaType.parse("application/json; charset=utf-8")
         );
@@ -201,77 +178,63 @@ public class FavoritesFragment extends Fragment {
         String url =
                 "https://generativelanguage.googleapis.com/v1beta/models/"
                         + "gemini-2.0-flash:generateContent?key="
-                        + getString(R.string.gemini_api_key);        // full Gemini endpoint
+                        + getString(R.string.gemini_api_key);
 
-        Request request = new Request.Builder()                       // build HTTP request
+        Request request = new Request.Builder()
                 .url(url)
                 .post(reqBody)
                 .build();
 
-        OkHttpClient client = new OkHttpClient();                    // HTTP client
-
-        client.newCall(request).enqueue(new Callback() {             // async call
+        new OkHttpClient().newCall(request).enqueue(new Callback() {
 
             @Override
-            public void onFailure(@NonNull okhttp3.Call call,
-                                  @NonNull IOException e) {
-                if (!isAdded()) return;                              // fragment detached?
-
-                requireActivity().runOnUiThread(() ->                // back to UI thread
-                        Toast.makeText(requireContext(),
-                                "Failed to load description",
-                                Toast.LENGTH_SHORT
-                        ).show()
-                );
-
-                openDescriptionFragment(a, "");                      // open without AI text
+            public void onFailure(@NonNull okhttp3.Call call, @NonNull IOException e) {
+                if (!isAdded()) return;
+                requireActivity().runOnUiThread(() ->
+                        Toast.makeText(requireContext(), "Failed to load description", Toast.LENGTH_SHORT).show());
+                openDescriptionFragment(a, "");
             }
 
             @Override
             public void onResponse(@NonNull okhttp3.Call call,
                                    @NonNull Response response) throws IOException {
 
-                String json = response.body().string();              // read body
-                String description = parseGeminiDescription(json);   // parse AI text
+                String json = response.body().string();
+                String desc = parseGeminiDescription(json);
 
-                if (!isAdded()) return;                              // fragment detached?
+                if (!isAdded()) return;
 
-                requireActivity().runOnUiThread(() ->                // back to UI
-                        openDescriptionFragment(a, description)      // open with AI text
-                );
+                requireActivity().runOnUiThread(() ->
+                        openDescriptionFragment(a, desc));
             }
         });
     }
 
-    // Parse AI response JSON
     private String parseGeminiDescription(String json) {
         try {
-            JSONObject obj = new JSONObject(json);                   // root
-            JSONArray candidates = obj.getJSONArray("candidates");   // candidates array
-            JSONObject content = candidates.getJSONObject(0)
-                    .getJSONObject("content");                       // first content
-            JSONArray parts = content.getJSONArray("parts");         // parts
-            return parts.getJSONObject(0).getString("text").trim();  // first text
+            JSONObject obj = new JSONObject(json);
+            JSONArray candidates = obj.getJSONArray("candidates");
+            JSONObject content = candidates.getJSONObject(0).getJSONObject("content");
+            JSONArray parts = content.getJSONArray("parts");
+            return parts.getJSONObject(0).getString("text").trim();
         } catch (Exception e) {
-            return "No description available.";                      // fallback
+            return "No description available.";
         }
     }
 
-    // Open DescriptionFragment with all info
     private void openDescriptionFragment(FirestoreAttraction a, String aiText) {
-
         DescriptionFragment fragment = DescriptionFragment.newInstance(
-                a.getId(),                                          // placeId
-                a.getName(),                                        // name
-                a.getTypeLabel(),                                   // type label
-                a.getPrimaryTypeKey(),                              // primary type key
-                a.getDistanceMeters(),                              // distance
-                a.getRating(),                                      // rating
-                a.getRatingCount(),                                 // rating count
-                aiText                                              // AI description
+                a.getId(),
+                a.getName(),
+                a.getTypeLabel(),
+                a.getPrimaryTypeKey(),
+                a.getDistanceMeters(),
+                a.getRating(),
+                a.getRatingCount(),
+                aiText
         );
 
-        requireActivity().getSupportFragmentManager()               // navigate
+        requireActivity().getSupportFragmentManager()
                 .beginTransaction()
                 .replace(R.id.flFragment, fragment)
                 .addToBackStack(null)

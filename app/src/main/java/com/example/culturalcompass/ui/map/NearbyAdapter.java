@@ -1,5 +1,6 @@
 package com.example.culturalcompass.ui.map;
 
+import android.graphics.Bitmap;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,7 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.culturalcompass.R;
 import com.example.culturalcompass.model.Attraction;
 import com.example.culturalcompass.model.FirestoreAttraction;
-import com.example.culturalcompass.model.Session;
+import com.example.culturalcompass.ui.favorites.PhotoCacheManager;
 import com.google.android.libraries.places.api.model.PhotoMetadata;
 import com.google.android.libraries.places.api.net.FetchPhotoRequest;
 import com.google.android.libraries.places.api.net.PlacesClient;
@@ -58,106 +59,105 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull ViewHolder h, int position) {
 
         Attraction a = items.get(position);
 
-        holder.itemView.setOnClickListener(v -> {
+        // Main click → open description
+        h.itemView.setOnClickListener(v -> {
             if (listener != null) listener.onAttractionClicked(a);
         });
 
-        holder.txtName.setText(a.getName());
-        holder.txtType.setText(a.getType());
+        h.txtName.setText(a.getName());
+        h.txtType.setText(a.getType());
 
-        // --- Set chip color by type ---
+        // Type chip styling
         String typeKey = a.getPrimaryTypeKey();
         if (typeKey != null) {
             switch (typeKey) {
                 case "museum":
-                    holder.txtType.setBackgroundResource(R.drawable.chip_museum);
-                    holder.txtType.setTextColor(0xFF5A3E2B);
+                    h.txtType.setBackgroundResource(R.drawable.chip_museum);
+                    h.txtType.setTextColor(0xFF5A3E2B);
                     break;
 
                 case "art_gallery":
-                    holder.txtType.setBackgroundResource(R.drawable.chip_art_gallery);
-                    holder.txtType.setTextColor(0xFF0A3A5C);
+                    h.txtType.setBackgroundResource(R.drawable.chip_art_gallery);
+                    h.txtType.setTextColor(0xFF0A3A5C);
                     break;
 
-                case "tourist_attraction":
                 default:
-                    holder.txtType.setBackgroundResource(R.drawable.chip_attraction);
-                    holder.txtType.setTextColor(0xFF1F6B1F);
+                    h.txtType.setBackgroundResource(R.drawable.chip_attraction);
+                    h.txtType.setTextColor(0xFF1F6B1F);
                     break;
             }
         }
 
-        // --- Distance ---
-        double meters = a.getDistanceMeters();
-        String distanceText = (meters < 1000)
-                ? String.format(Locale.getDefault(), "%.0f m away", meters)
-                : String.format(Locale.getDefault(), "%.1f km away", meters / 1000.0);
-        holder.txtDistance.setText(distanceText);
+        // Distance text
+        double m = a.getDistanceMeters();
+        h.txtDistance.setText(
+                (m < 1000)
+                        ? String.format(Locale.getDefault(), "%.0f m away", m)
+                        : String.format(Locale.getDefault(), "%.1f km away", m / 1000.0)
+        );
 
-        // --- Rating ---
-        Double rating = a.getRating();
-        Integer ratingCount = a.getRatingCount();
+        // Rating section
+        Double r = a.getRating();
+        Integer rc = a.getRatingCount();
 
-        if (rating != null && ratingCount != null && ratingCount > 0) {
-            holder.txtRatingValue.setText(String.format(Locale.getDefault(), "%.1f", rating));
-            holder.ratingBar.setRating(rating.floatValue());
-            holder.txtRatingCount.setText("(" + ratingCount + ")");
-            holder.ratingBar.setVisibility(View.VISIBLE);
-            holder.txtRatingCount.setVisibility(View.VISIBLE);
-            holder.layoutRating.setVisibility(View.VISIBLE);
+        if (r != null && rc != null && rc > 0) {
+            h.txtRatingValue.setText(String.format(Locale.getDefault(), "%.1f", r));
+            h.ratingBar.setRating(r.floatValue());
+            h.txtRatingCount.setText("(" + rc + ")");
+            h.ratingBar.setVisibility(View.VISIBLE);
+            h.txtRatingCount.setVisibility(View.VISIBLE);
+            h.layoutRating.setVisibility(View.VISIBLE);
         } else {
-            holder.txtRatingValue.setText("No ratings yet");
-            holder.ratingBar.setVisibility(View.GONE);
-            holder.txtRatingCount.setVisibility(View.GONE);
-            holder.layoutRating.setVisibility(View.VISIBLE);
+            h.txtRatingValue.setText("No ratings yet");
+            h.ratingBar.setVisibility(View.GONE);
+            h.txtRatingCount.setVisibility(View.GONE);
+            h.layoutRating.setVisibility(View.VISIBLE);
         }
 
-        // --- Photo ---
-        holder.imgPhoto.setImageResource(R.drawable.ic_landmark_placeholder);
-        PhotoMetadata meta = a.getPhotoMetadata();
+        // photo loading
+        Bitmap cached = PhotoCacheManager.load(h.itemView.getContext(), a.getPlaceId());
+        if (cached != null) {
+            h.imgPhoto.setImageBitmap(cached);
+        } else {
+            h.imgPhoto.setImageResource(R.drawable.ic_landmark_placeholder);
 
-        if (meta != null && placesClient != null) {
-            int boundPos = holder.getBindingAdapterPosition();
+            PhotoMetadata meta = a.getPhotoMetadata();
+            if (meta != null) {
+                FetchPhotoRequest photoReq = FetchPhotoRequest.builder(meta)
+                        .setMaxWidth(400)
+                        .setMaxHeight(400)
+                        .build();
 
-            FetchPhotoRequest req = FetchPhotoRequest.builder(meta)
-                    .setMaxWidth(400)
-                    .setMaxHeight(400)
-                    .build();
-
-            placesClient.fetchPhoto(req)
-                    .addOnSuccessListener(response -> {
-                        if (holder.getBindingAdapterPosition() == boundPos) {
-                            holder.imgPhoto.setImageBitmap(response.getBitmap());
-                        }
-                    });
+                placesClient.fetchPhoto(photoReq).addOnSuccessListener(resp -> {
+                    Bitmap bmp = resp.getBitmap();
+                    PhotoCacheManager.save(h.itemView.getContext(), a.getPlaceId(), bmp);
+                    h.imgPhoto.setImageBitmap(bmp);
+                });
+            }
         }
 
-        // =============================================
-        // ⭐ FAVORITES — REAL FIRESTORE TOGGLE
-        // =============================================
+        // favorite toogle
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         String email = FirebaseAuth.getInstance().getCurrentUser().getEmail();
 
-        // ⭐ **Set heart icon from the object's favorite flag**
-        updateHeartIcon(holder, a.isFavorite());
+        updateHeartIcon(h, a.isFavorite());
 
-        // ⭐ **Allow user to toggle favorite**
-        holder.imgFavorite.setOnClickListener(v -> {
+        h.imgFavorite.setOnClickListener(v -> {
             if (email == null) return;
 
             boolean newFav = !a.isFavorite();
             a.setFavorite(newFav);
-            updateHeartIcon(holder, newFav);
+            updateHeartIcon(h, newFav);
 
-            // ⭐ IMPORTANT: refresh this row so UI stays correct
-            notifyItemChanged(holder.getBindingAdapterPosition());
+            // Refresh row immediately
+            notifyItemChanged(h.getBindingAdapterPosition());
 
             if (newFav) {
-                // ADD TO FIRESTORE
+                // Add to Firestore
                 FirestoreAttraction fa = new FirestoreAttraction(
                         a.getPlaceId(),
                         a.getName(),
@@ -182,7 +182,7 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
                         );
 
             } else {
-                // REMOVE FROM FIRESTORE
+                // Remove from Firestore
                 db.collection("users")
                         .document(email)
                         .collection("favorites")
@@ -194,13 +194,12 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
                                         Toast.LENGTH_SHORT).show()
                         );
             }
-
         });
     }
 
-    private void updateHeartIcon(ViewHolder holder, boolean favorite) {
-        holder.imgFavorite.setImageResource(
-                favorite ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline
+    private void updateHeartIcon(ViewHolder h, boolean fav) {
+        h.imgFavorite.setImageResource(
+                fav ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline
         );
     }
 
@@ -211,29 +210,24 @@ public class NearbyAdapter extends RecyclerView.Adapter<NearbyAdapter.ViewHolder
 
     static class ViewHolder extends RecyclerView.ViewHolder {
 
-        ImageView imgPhoto;
-        TextView txtName;
-        TextView txtType;
-        TextView txtDistance;
-        ImageView imgFavorite;
-
+        ImageView imgPhoto, imgFavorite;
+        TextView txtName, txtType, txtDistance;
         LinearLayout layoutRating;
-        TextView txtRatingValue;
-        TextView txtRatingCount;
+        TextView txtRatingValue, txtRatingCount;
         RatingBar ratingBar;
 
-        ViewHolder(@NonNull View itemView) {
-            super(itemView);
-            txtName = itemView.findViewById(R.id.txtName);
-            txtType = itemView.findViewById(R.id.txtType);
-            txtDistance = itemView.findViewById(R.id.txtDistance);
-            imgFavorite = itemView.findViewById(R.id.imgFavorite);
-            imgPhoto = itemView.findViewById(R.id.imgPhoto);
+        ViewHolder(@NonNull View item) {
+            super(item);
+            txtName = item.findViewById(R.id.txtName);
+            txtType = item.findViewById(R.id.txtType);
+            txtDistance = item.findViewById(R.id.txtDistance);
+            imgFavorite = item.findViewById(R.id.imgFavorite);
+            imgPhoto = item.findViewById(R.id.imgPhoto);
 
-            layoutRating = itemView.findViewById(R.id.layoutRating);
-            txtRatingValue = itemView.findViewById(R.id.txtRatingValue);
-            txtRatingCount = itemView.findViewById(R.id.txtRatingCount);
-            ratingBar = itemView.findViewById(R.id.ratingBar);
+            layoutRating = item.findViewById(R.id.layoutRating);
+            txtRatingValue = item.findViewById(R.id.txtRatingValue);
+            txtRatingCount = item.findViewById(R.id.txtRatingCount);
+            ratingBar = item.findViewById(R.id.ratingBar);
         }
     }
 }

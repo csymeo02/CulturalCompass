@@ -1,6 +1,8 @@
 package com.example.culturalcompass.ui.favorites;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.view.LayoutInflater;
@@ -20,10 +22,9 @@ import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.net.FetchPhotoRequest;
 import com.google.android.libraries.places.api.net.FetchPlaceRequest;
 import com.google.android.libraries.places.api.net.PlacesClient;
+
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
-
-import com.google.android.material.snackbar.Snackbar;
 
 import java.util.Arrays;
 import java.util.List;
@@ -31,9 +32,8 @@ import java.util.Locale;
 
 public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Holder> {
 
-    // ---------------- LISTENERS ----------------
     public interface OnFavoriteClickListener {
-        void onFavoriteClicked(FirestoreAttraction attraction);
+        void onFavoriteClicked(FirestoreAttraction a);
     }
 
     public interface OnEmptyStateListener {
@@ -43,7 +43,6 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Hold
     private OnFavoriteClickListener clickListener;
     private OnEmptyStateListener emptyListener;
 
-    // ---------------- DATA ----------------
     private List<FirestoreAttraction> items;
     private PlacesClient placesClient;
 
@@ -60,12 +59,12 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Hold
         this.emptyListener = listener;
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void update(List<FirestoreAttraction> newItems) {
         this.items = newItems;
         notifyDataSetChanged();
     }
 
-    // ----------------------------------------------------------
     @NonNull
     @Override
     public Holder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -74,66 +73,68 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Hold
         return new Holder(v);
     }
 
-    // ----------------------------------------------------------
     @Override
     public void onBindViewHolder(@NonNull Holder h, int pos) {
         FirestoreAttraction a = items.get(pos);
 
-        // ---- BASIC INFO ----
         h.txtName.setText(a.getName());
         h.txtType.setText(a.getTypeLabel());
 
         double m = a.getDistanceMeters();
-        if (m < 1000) {
-            h.txtDistance.setText(String.format(Locale.getDefault(), "%.0f m", m));
-        } else {
-            h.txtDistance.setText(String.format(Locale.getDefault(), "%.1f km", m / 1000));
-        }
+        h.txtDistance.setText(m < 1000
+                ? String.format(Locale.getDefault(), "%.0f m", m)
+                : String.format(Locale.getDefault(), "%.1f km", m / 1000));
 
-        // ---- DEFAULT IMAGE ----
+        // new logic -> load photo from phone cache and if does not exist call the API
         h.imgPhoto.setImageResource(R.drawable.ic_landmark_placeholder);
 
-        // ---- LOAD PLACE PHOTO ----
-        if (placesClient != null && a.getId() != null) {
+        Bitmap cached = PhotoCacheManager.load(h.itemView.getContext(), a.getId());
+        if (cached != null) {
+            h.imgPhoto.setImageBitmap(cached);
+        } else {
+            h.imgPhoto.setImageResource(R.drawable.ic_landmark_placeholder);
 
-            List<Place.Field> fields = Arrays.asList(Place.Field.PHOTO_METADATAS);
+            if (placesClient != null && a.getId() != null) {
 
-            FetchPlaceRequest req = FetchPlaceRequest.builder(a.getId(), fields).build();
+                FetchPlaceRequest req = FetchPlaceRequest.builder(
+                        a.getId(),
+                        Arrays.asList(Place.Field.PHOTO_METADATAS)
+                ).build();
 
-            placesClient.fetchPlace(req).addOnSuccessListener(response -> {
+                placesClient.fetchPlace(req).addOnSuccessListener(response -> {
 
-                Place place = response.getPlace();
-                if (place.getPhotoMetadatas() != null &&
-                        !place.getPhotoMetadatas().isEmpty()) {
+                    List<PhotoMetadata> metaList = response.getPlace().getPhotoMetadatas();
+                    if (metaList == null || metaList.isEmpty()) return;
 
-                    PhotoMetadata meta = place.getPhotoMetadatas().get(0);
+                    PhotoMetadata meta = metaList.get(0);
 
                     FetchPhotoRequest photoReq = FetchPhotoRequest.builder(meta)
                             .setMaxWidth(400)
                             .setMaxHeight(400)
                             .build();
 
-                    placesClient.fetchPhoto(photoReq)
-                            .addOnSuccessListener(photoResponse ->
-                                    h.imgPhoto.setImageBitmap(photoResponse.getBitmap())
-                            );
-                }
-            });
+                    placesClient.fetchPhoto(photoReq).addOnSuccessListener(photoResponse -> {
+                        Bitmap bmp = photoResponse.getBitmap();
+                        PhotoCacheManager.save(h.itemView.getContext(), a.getId(), bmp);
+                        h.imgPhoto.setImageBitmap(bmp);
+                    });
+                });
+            }
         }
 
-        // ---- CLICK: Open DescriptionFragment (only when online) ----
+
+        // open description
         h.itemView.setOnClickListener(v -> {
             if (!isOnline(v)) {
                 Toast.makeText(v.getContext(), "Failed to load description", Toast.LENGTH_SHORT).show();
                 return;
             }
-
             if (clickListener != null) clickListener.onFavoriteClicked(a);
         });
 
-        // ---- UNFAVORITE BUTTON ----
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        // unfavorite
         String email = FirebaseAuth.getInstance().getCurrentUser().getEmail();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
 
         h.btnUnfavorite.setOnClickListener(v -> {
             int index = h.getBindingAdapterPosition();
@@ -145,12 +146,9 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Hold
                     .document(a.getId())
                     .delete()
                     .addOnSuccessListener(x -> {
-
-                        Toast.makeText(
-                                v.getContext(),
+                        Toast.makeText(v.getContext(),
                                 "Removed: " + a.getName(),
-                                Toast.LENGTH_SHORT
-                        ).show();
+                                Toast.LENGTH_SHORT).show();
 
                         items.remove(index);
                         notifyItemRemoved(index);
@@ -162,13 +160,11 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Hold
         });
     }
 
-    // ----------------------------------------------------------
     @Override
     public int getItemCount() {
         return items.size();
     }
 
-    // ----------------------------------------------------------
     private boolean isOnline(View v) {
         ConnectivityManager cm =
                 (ConnectivityManager) v.getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -176,7 +172,6 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Hold
         return net != null && net.isConnected();
     }
 
-    // ----------------------------------------------------------
     static class Holder extends RecyclerView.ViewHolder {
         TextView txtName, txtType, txtDistance;
         ImageView imgPhoto, btnUnfavorite;

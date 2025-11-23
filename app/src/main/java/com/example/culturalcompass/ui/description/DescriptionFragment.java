@@ -1,5 +1,6 @@
 package com.example.culturalcompass.ui.description;
 
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,7 +17,7 @@ import androidx.fragment.app.Fragment;
 
 import com.example.culturalcompass.R;
 import com.example.culturalcompass.model.FirestoreAttraction;
-import com.example.culturalcompass.model.Session;
+import com.example.culturalcompass.ui.favorites.PhotoCacheManager;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.PhotoMetadata;
 import com.google.android.libraries.places.api.model.Place;
@@ -28,6 +29,7 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 
 public class DescriptionFragment extends Fragment {
@@ -41,28 +43,14 @@ public class DescriptionFragment extends Fragment {
     private static final String ARG_RATING_COUNT = "arg_rating_count";
     private static final String ARG_DESCRIPTION = "arg_description";
 
-    // ---- Data fields ----
-    private String placeId;
-    private String name;
-    private String typeLabel;
-    private String primaryTypeKey;
-    private double distanceMeters;
-    private double rating;
+    private String placeId, name, typeLabel, primaryTypeKey, aiDescription;
+    private double distanceMeters, rating;
     private int ratingCount;
-    private String aiDescription;
 
-    // ---- UI ----
-    private ImageView btnBack;
-    private ImageView imgPhoto;
-    private TextView txtName;
-    private TextView txtType;
-    private TextView txtDistance;
+    private ImageView btnBack, imgPhoto, imgFavorite;
+    private TextView txtName, txtType, txtDistance, txtRatingValue, txtRatingCount, txtDescription;
     private LinearLayout layoutRating;
     private RatingBar ratingBar;
-    private TextView txtRatingValue;
-    private TextView txtRatingCount;
-    private ImageView imgFavorite;
-    private TextView txtDescription;
 
     private PlacesClient placesClient;
     private FirebaseFirestore db;
@@ -134,7 +122,6 @@ public class DescriptionFragment extends Fragment {
     public void onViewCreated(@NonNull View v, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(v, savedInstanceState);
 
-        // --- Bind UI ----
         btnBack = v.findViewById(R.id.btnBack);
         imgPhoto = v.findViewById(R.id.imgPhotoLarge);
         txtName = v.findViewById(R.id.txtNameLarge);
@@ -147,17 +134,13 @@ public class DescriptionFragment extends Fragment {
         imgFavorite = v.findViewById(R.id.imgFavoriteDetail);
         txtDescription = v.findViewById(R.id.txtDescriptionAI);
 
-        // --- Back button (FIXED) ---
-        btnBack.setOnClickListener(view ->
-                requireActivity().getSupportFragmentManager().popBackStack()
-        );
+        btnBack.setOnClickListener(x -> requireActivity().getSupportFragmentManager().popBackStack());
 
-        // --- Basic text ---
-        txtName.setText(name != null ? name : "Unknown place");
+        txtName.setText(name);
         txtType.setText(typeLabel != null ? typeLabel : primaryTypeKey);
-
         styleTypeChip(primaryTypeKey);
         txtDistance.setText(formatDistance(distanceMeters));
+
         bindRating();
 
         txtDescription.setText(
@@ -171,11 +154,9 @@ public class DescriptionFragment extends Fragment {
     }
 
     private String formatDistance(double meters) {
-        if (meters < 1000) {
-            return String.format(Locale.getDefault(), "%.0f m away", meters);
-        } else {
-            return String.format(Locale.getDefault(), "%.1f km away", meters / 1000.0);
-        }
+        return meters < 1000
+                ? String.format(Locale.getDefault(), "%.0f m away", meters)
+                : String.format(Locale.getDefault(), "%.1f km away", meters / 1000.0);
     }
 
     private void bindRating() {
@@ -211,32 +192,38 @@ public class DescriptionFragment extends Fragment {
     }
 
     private void loadPhotoForPlace() {
-        imgPhoto.setImageResource(R.drawable.ic_landmark_placeholder);
-
         if (placeId == null) return;
+
+        Bitmap cached = PhotoCacheManager.load(requireContext(), placeId);
+        if (cached != null) {
+            imgPhoto.setImageBitmap(cached);
+            return;
+        }
+
+        imgPhoto.setImageResource(R.drawable.ic_landmark_placeholder);
 
         FetchPlaceRequest req = FetchPlaceRequest.newInstance(
                 placeId,
                 Arrays.asList(Place.Field.PHOTO_METADATAS)
         );
 
-        placesClient.fetchPlace(req)
-                .addOnSuccessListener(response -> {
-                    if (response.getPlace().getPhotoMetadatas() == null ||
-                            response.getPlace().getPhotoMetadatas().isEmpty()) return;
+        placesClient.fetchPlace(req).addOnSuccessListener(response -> {
+            List<PhotoMetadata> metas = response.getPlace().getPhotoMetadatas();
+            if (metas == null || metas.isEmpty()) return;
 
-                    PhotoMetadata meta = response.getPlace().getPhotoMetadatas().get(0);
+            PhotoMetadata meta = metas.get(0);
 
-                    FetchPhotoRequest photoReq = FetchPhotoRequest.builder(meta)
-                            .setMaxWidth(800)
-                            .setMaxHeight(800)
-                            .build();
+            FetchPhotoRequest photoReq = FetchPhotoRequest.builder(meta)
+                    .setMaxWidth(800)
+                    .setMaxHeight(800)
+                    .build();
 
-                    placesClient.fetchPhoto(photoReq)
-                            .addOnSuccessListener(photoResponse ->
-                                    imgPhoto.setImageBitmap(photoResponse.getBitmap())
-                            );
-                });
+            placesClient.fetchPhoto(photoReq).addOnSuccessListener(photoResponse -> {
+                Bitmap bmp = photoResponse.getBitmap();
+                PhotoCacheManager.save(requireContext(), placeId, bmp);
+                imgPhoto.setImageBitmap(bmp);
+            });
+        });
     }
 
     private void setupFavorites() {
@@ -262,7 +249,6 @@ public class DescriptionFragment extends Fragment {
             updateHeartIcon(newFav);
 
             if (newFav) {
-                // ADD TO FIRESTORE
                 FirestoreAttraction fa = new FirestoreAttraction(
                         placeId,
                         name,
@@ -281,26 +267,20 @@ public class DescriptionFragment extends Fragment {
                         .document(placeId)
                         .set(fa)
                         .addOnSuccessListener(x ->
-                                Toast.makeText(getContext(),
-                                        "Added: " + name,
-                                        Toast.LENGTH_SHORT).show()
+                                Toast.makeText(getContext(), "Added: " + name, Toast.LENGTH_SHORT).show()
                         );
 
             } else {
-                // REMOVE FROM FIRESTORE
                 db.collection("users")
                         .document(email)
                         .collection("favorites")
                         .document(placeId)
                         .delete()
                         .addOnSuccessListener(x ->
-                                Toast.makeText(getContext(),
-                                        "Removed: " + name,
-                                        Toast.LENGTH_SHORT).show()
+                                Toast.makeText(getContext(), "Removed: " + name, Toast.LENGTH_SHORT).show()
                         );
             }
         });
-
     }
 
     private void updateHeartIcon(boolean fav) {
