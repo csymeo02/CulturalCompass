@@ -1,11 +1,15 @@
 package com.example.culturalcompass;
 
+import static android.content.ContentValues.TAG;
+
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
@@ -18,11 +22,14 @@ import com.example.culturalcompass.ui.map.MapFragment;
 import com.example.culturalcompass.ui.register.RegisterFragment;
 import com.example.culturalcompass.ui.settings.SettingsFragment;
 import com.example.culturalcompass.ui.splash.SplashFragment;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -103,6 +110,27 @@ public class MainActivity extends AppCompatActivity {
             }
             return true;
         });
+
+        // Retrieve the FCM registration token
+        FirebaseMessaging.getInstance().getToken()
+                .addOnCompleteListener(new OnCompleteListener<String>() {
+                    @Override
+                    public void onComplete(Task<String> task) {
+                        if (!task.isSuccessful()) {
+                            Log.w(TAG, "Fetching FCM registration token failed", task.getException());
+                            return;
+                        }
+
+                        // Get the FCM registration token
+                        String token = task.getResult();
+
+                        // TODO: do smth when opening the push notification
+                        // for now we just toast the firebase cloud messaging registration code
+                        String msg = "FCM Registration token: " + token;
+                        Log.d(TAG, msg);
+                        Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     // ------------------------------------------------------------------------
@@ -164,18 +192,7 @@ public class MainActivity extends AppCompatActivity {
 
     // ------------------------------------------------------------------------
 
-    public void navigateToLogin() {
-        getSupportFragmentManager().beginTransaction()
-                .replace(R.id.flFragment, new LoginFragment())
-                .commit();
-    }
 
-    public void navigateToRegister() {
-        getSupportFragmentManager().beginTransaction()
-                .replace(R.id.flFragment, new RegisterFragment())
-                .addToBackStack(null)
-                .commit();
-    }
 
     public void navigateToHome() {
         exitSplash();
