@@ -2,7 +2,8 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
+    android:background="@color/white"
+    android:padding="0dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -10,84 +11,85 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- BACK BUTTON -->
         <ImageView
             android:id="@+id/btnBack"
             android:layout_width="28dp"
             android:layout_height="28dp"
-            android:layout_marginBottom="8dp"
-            android:contentDescription="@string/back"
             android:padding="4dp"
-            android:src="@drawable/ic_back_arrow" />
+            android:src="@drawable/ic_back_arrow"
+            android:layout_marginBottom="12dp"/>
 
-        <!-- Large image -->
+        <!-- MAIN PHOTO -->
         <ImageView
             android:id="@+id/imgPhotoLarge"
             android:layout_width="match_parent"
-            android:layout_height="220dp"
-            android:background="@drawable/bg_image_rounded"
-            android:clipToOutline="true"
+            android:layout_height="240dp"
             android:scaleType="centerCrop"
-            android:src="@drawable/ic_landmark_placeholder" />
+            android:background="@drawable/bg_image_rounded"
+            android:clipToOutline="true" />
 
-        <!-- Name -->
+        <!-- TITLE -->
         <TextView
             android:id="@+id/txtNameLarge"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/place_name"
+            android:layout_marginTop="18dp"
+            android:text="Place name"
             android:textColor="@android:color/black"
             android:textSize="22sp"
             android:textStyle="bold" />
 
-        <!-- Row: type chip + distance + favorite -->
+        <!-- INFO ROW: chip + distance + heart -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
+            <!-- TYPE CHIP -->
             <TextView
                 android:id="@+id/txtTypeChip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/chip_museum"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="4dp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
                 android:text="Museum"
                 android:textColor="@android:color/black"
-                android:textSize="12sp" />
+                android:textSize="13sp" />
 
+            <!-- DISTANCE -->
             <TextView
                 android:id="@+id/txtDistanceDetail"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="14dp"
                 android:text="250 m away"
                 android:textColor="@android:color/darker_gray"
                 android:textSize="12sp" />
 
             <View
                 android:layout_width="0dp"
-                android:layout_height="1dp"
+                android:layout_height="wrap_content"
                 android:layout_weight="1" />
 
+            <!-- HEART -->
             <ImageView
                 android:id="@+id/imgFavoriteDetail"
-                android:layout_width="26dp"
-                android:layout_height="26dp"
-                android:contentDescription="Favorite"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:padding="4dp"
                 android:src="@drawable/ic_heart_outline" />
         </LinearLayout>
 
-        <!-- Rating row -->
+        <!-- RATING -->
         <LinearLayout
             android:id="@+id/layoutRatingDetail"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -122,38 +124,38 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
-        <!-- Section title -->
+        <!-- ABOUT TITLE -->
         <TextView
             android:id="@+id/txtAboutTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="22dp"
             android:text="About this place"
             android:textColor="@android:color/black"
             android:textSize="16sp"
             android:textStyle="bold" />
 
-        <!-- AI Description -->
+        <!-- DESCRIPTION -->
         <TextView
             android:id="@+id/txtDescriptionAI"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="@string/description_disclaimer"
+            android:layout_marginTop="8dp"
+            android:text="Loading AI description..."
             android:textColor="@android:color/black"
             android:textSize="14sp" />
 
-        <!-- Disclaimer -->
+        <!-- DISCLAIMER -->
         <TextView
             android:id="@+id/txtAIDisclaimer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
+            android:layout_marginTop="20dp"
             android:gravity="center"
-            android:paddingTop="8dp"
-            android:text="@string/description_ai_disclaimer"
+            android:text="Description generated automatically — may contain inaccuracies."
             android:textColor="@android:color/darker_gray"
             android:textSize="11sp" />
 
     </LinearLayout>
+
 </ScrollView>

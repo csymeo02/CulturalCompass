@@ -8,6 +8,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RatingBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -258,23 +259,45 @@ public class DescriptionFragment extends Fragment {
             updateHeartIcon(newFav);
 
             if (newFav) {
+                // ADD TO FIRESTORE
                 FirestoreAttraction fa = new FirestoreAttraction(
-                        placeId, name, 0, 0, distanceMeters, typeLabel, primaryTypeKey,
-                        rating > 0 ? rating : null, ratingCount > 0 ? ratingCount : null
+                        placeId,
+                        name,
+                        0,
+                        0,
+                        distanceMeters,
+                        typeLabel,
+                        primaryTypeKey,
+                        rating > 0 ? rating : null,
+                        ratingCount > 0 ? ratingCount : null
                 );
+
                 db.collection("users")
                         .document(email)
                         .collection("favorites")
                         .document(placeId)
-                        .set(fa);
+                        .set(fa)
+                        .addOnSuccessListener(x ->
+                                Toast.makeText(getContext(),
+                                        "Added: " + name,
+                                        Toast.LENGTH_SHORT).show()
+                        );
+
             } else {
+                // REMOVE FROM FIRESTORE
                 db.collection("users")
                         .document(email)
                         .collection("favorites")
                         .document(placeId)
-                        .delete();
+                        .delete()
+                        .addOnSuccessListener(x ->
+                                Toast.makeText(getContext(),
+                                        "Removed: " + name,
+                                        Toast.LENGTH_SHORT).show()
+                        );
             }
         });
+
     }
 
     private void updateHeartIcon(boolean fav) {

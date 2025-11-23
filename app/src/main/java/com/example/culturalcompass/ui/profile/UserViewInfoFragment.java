@@ -46,12 +46,12 @@ public class UserViewInfoFragment extends Fragment {
 
         db.collection("users").document(email).get().addOnSuccessListener(doc -> {
 
-            tvEmail.setText("Email: " + email);
-            tvName.setText("Name: " + doc.getString("name"));
-            tvSurname.setText("Surname: " + doc.getString("surname"));
+            tvEmail.setText(email);
+            tvName.setText(doc.getString("name"));
+            tvSurname.setText(doc.getString("surname"));
 
             Date b = doc.getDate("birthdate");
-            if (b != null) tvBirthday.setText("Birthday: " + df.format(b));
+            if (b != null) tvBirthday.setText(df.format(b));
         });
 
         btnEdit.setOnClickListener(v1 -> {
