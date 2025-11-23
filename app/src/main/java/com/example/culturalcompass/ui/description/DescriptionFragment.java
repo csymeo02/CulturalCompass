@@ -23,6 +23,8 @@ import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.net.FetchPhotoRequest;
 import com.google.android.libraries.places.api.net.FetchPlaceRequest;
 import com.google.android.libraries.places.api.net.PlacesClient;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.Arrays;
@@ -238,7 +240,8 @@ public class DescriptionFragment extends Fragment {
     }
 
     private void setupFavorites() {
-        String email = Session.currentUser != null ? Session.currentUser.getEmail() : null;
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        String email = (user != null) ? user.getEmail() : null;
 
         if (email == null) {
             updateHeartIcon(false);

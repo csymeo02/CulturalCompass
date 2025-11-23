@@ -1,5 +1,5 @@
 package com.example.culturalcompass.model;
 
 public class Session {
-    public static User currentUser;
+    public static String currentUsername;
 }

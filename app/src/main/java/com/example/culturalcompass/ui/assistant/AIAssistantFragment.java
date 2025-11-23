@@ -2,6 +2,7 @@ package com.example.culturalcompass.ui.assistant;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,6 +20,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.culturalcompass.R;
 import com.example.culturalcompass.model.Message;
 import com.example.culturalcompass.model.Session;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -213,9 +216,10 @@ public class AIAssistantFragment extends Fragment {
 
             txt.put("text",
                     "You are Cultural Compass, an AI cultural guide. " +
-                            "The name of the user is " + Session.currentUser.getName() +
+                            "The name of the user is " + Session.currentUsername + ". " +
                             "Rules: No asterisks, no markdown, plain text only, short and friendly."
             );
+
 
             parts.put(txt);
             sys.put("parts", parts);

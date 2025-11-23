@@ -129,6 +129,7 @@ public class MainActivity extends AppCompatActivity {
                         } else {
                             textGreeting.setText("Hello, " + name);
                         }
+                        Session.currentUsername = name;
                     }
                 })
                 .addOnFailureListener(e -> textGreeting.setText("Hello"));

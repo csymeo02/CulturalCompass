@@ -133,15 +133,20 @@ public class LoginFragment extends Fragment {
                 .get()
                 .addOnSuccessListener(doc -> {
                     if (doc.exists()) {
-                        // Convert Firestore document to User model
-                        User user = doc.toObject(User.class);
+                        // get the name from Firestore
+                        String name = doc.getString("name");
 
-                        // Save in global session
-                        Session.currentUser = user;
+                        if (name != null && !name.isEmpty()) {
+                            Session.currentUsername = name;
+                        } else {
+                            // fallback to email prefix if name missing
+                            String emailPrefix = email.substring(0, email.indexOf("@"));
+                            Session.currentUsername = emailPrefix;
+                        }
 
-                        // Update header greeting if available
                         ((MainActivity) requireActivity()).updateGreeting();
                     }
+
 
                     // Go to home screen
                     ((MainActivity) requireActivity()).navigateToHome();
