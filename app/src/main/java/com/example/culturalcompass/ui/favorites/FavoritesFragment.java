@@ -165,9 +165,12 @@ public class FavoritesFragment extends Fragment {
 
         // 2) Build Gemini prompt
         String prompt =
-                "Give me a short friendly explanation (3–5 sentences, no markdown) about: "
-                        + a.getName()
-                        + ". The type is " + a.getTypeLabel() + "."; // simple prompt
+                "Give me a short friendly explanation (3–5 sentences, no markdown) "
+                        + "about this place: " + a.getName() + ". "
+                        + "It is a " + a.getTypeLabel() + ". "
+                        + "If the place is well-known or historically important, include useful background and key details. "
+                        + "If it's small or local, keep the description simple and experience-based. "
+                        + "Do NOT mention coordinates or country names.";
 
         JSONObject body = new JSONObject();                          // root JSON
         try {
