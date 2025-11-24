@@ -60,14 +60,13 @@ public class UserEditInfoFragment extends Fragment {
         // DATE PICKER
         Calendar cal = Calendar.getInstance();
         datePicker = new DatePickerDialog(requireContext(),
-                R.style.CustomDatePicker,   // <-- Added for the color
+                R.style.CustomDatePicker,
                 (view, y, m, d) -> {
                     Calendar c = Calendar.getInstance();
                     c.set(y, m, d);
                     etBirthday.setText(df.format(c.getTime()));
                 },
-                cal.get(Calendar.YEAR), cal.get(Calendar.MONTH),
-                cal.get(Calendar.DAY_OF_MONTH));
+                cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH));
 
         Button btnCancel = v.findViewById(R.id.btnCancel);
         btnCancel.setOnClickListener(x -> {

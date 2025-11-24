@@ -89,14 +89,9 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-/**
- * Map screen:
- * - Uses FirebaseAuth to get current user (email used for Firestore paths)
- * - Loads nearby cultural places with Google Places
- * - Caches them in Firestore per user
- * - Marks favorites based on /users/{email}/favorites
- * - Supports filters, sorting and clustering
- */
+
+// Main map screen: shows Google Map, nearby places list, filters, sorting and clustering.
+// Also integrates Firestore caching and AI-generated descriptions.
 public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private static final float MIN_DISTANCE_CHANGE = 100f; // meters
@@ -156,7 +151,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // ---- Get current Firebase user ----
+        // Get current logged-in Firebase user; redirect to login if none.
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
             // If somehow no user, send them back to Login and stop
@@ -176,7 +171,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         db = FirebaseFirestore.getInstance();
 
-        // ---- Places client (from MainActivity static) ----
+        // Initialize Places client once, using key from resources.
         if (!Places.isInitialized()) {
             Places.initializeWithNewPlacesApiEnabled(
                     requireContext().getApplicationContext(),
@@ -192,6 +187,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
 
+        // High-accuracy location request with 5s interval.
         locationRequest = new LocationRequest.Builder(
                 LocationRequest.PRIORITY_HIGH_ACCURACY,
                 5000
@@ -204,6 +200,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
                 if (!followUserLocation) {
+                    // Ignore GPS updates when user is viewing a searched location.
                     return;
                 }
 
@@ -223,6 +220,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         dist
                 );
 
+                // Only refetch nearby places if user moved more than MIN_DISTANCE_CHANGE.
                 if (dist[0] > MIN_DISTANCE_CHANGE) {
                     lastFetchLat = newLat;
                     lastFetchLon = newLon;
@@ -239,7 +237,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             }
         };
 
-        // Permission launcher
+        // Permission launcher for location permission result.
         requestPermissionLauncher =
                 registerForActivityResult(
                         new ActivityResultContracts.RequestPermission(),
@@ -256,7 +254,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         }
                 );
 
-        // Places Autocomplete launcher
+        // Places Autocomplete launcher result (for search bar).
         autocompleteLauncher =
                 registerForActivityResult(
                         new ActivityResultContracts.StartActivityForResult(),
@@ -285,6 +283,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             ViewGroup container,
             Bundle savedInstanceState
     ) {
+        // Inflate layout and wire up map, list, filters and search bar.
         View view = inflater.inflate(R.layout.fragment_map, container, false);
 
         searchBar = view.findViewById(R.id.searchBar);
@@ -317,6 +316,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     // ----------------- AI description + DescriptionFragment ------------------
 
+    // Builds a Gemini API request for a natural-language description, calls it, then opens DescriptionFragment.
     private void requestAIDescriptionAndOpenFragment(Attraction a) {
 
         String prompt =
@@ -391,6 +391,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         });
     }
 
+    // Extracts the first text part from Gemini JSON response.
     private String parseGeminiDescription(String json) {
         try {
             JSONObject obj = new JSONObject(json);
@@ -403,6 +404,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
+    // Creates and opens the DescriptionFragment with attraction details and AI text.
     private void openDescriptionFragment(Attraction a, String aiText) {
 
         DescriptionFragment fragment = DescriptionFragment.newInstance(
@@ -425,12 +427,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     // ----------------- Firestore helpers -----------------
 
+    // Reference to /users/{email}/attractions collection for caching nearby places.
     private CollectionReference userAttractionsRef() {
         return db.collection("users")
                 .document(userEmail)
                 .collection("attractions");
     }
 
+    // Simple online check to decide between live Places API and offline Firestore cache.
     private boolean isOnline() {
         ConnectivityManager cm =
                 (ConnectivityManager) requireContext().getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -440,6 +444,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     // ----------------- Places search / map interactions -----------------
 
+    // Launches Places Autocomplete overlay for the search bar.
     private void openSearchAutocomplete() {
         List<Place.Field> fields = Arrays.asList(
                 Place.Field.ID,
@@ -455,10 +460,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         autocompleteLauncher.launch(intent);
     }
 
+    // Called when user picks a place from Autocomplete; centers map and fetches nearby.
     private void onPlaceSelected(Place place) {
         LatLng latLng = place.getLocation();
         if (latLng == null) return;
 
+        // Stop following GPS; user is exploring a custom location.
         followUserLocation = false;
 
         if (searchBar != null) {
@@ -484,6 +491,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
 
+        // "My location" button resets search and resumes following user.
         mMap.setOnMyLocationButtonClickListener(() -> {
             followUserLocation = true;
 
@@ -501,6 +509,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         initClusterManager();
         enableMyLocation();
 
+        // Start location updates if permission already granted.
         if (ContextCompat.checkSelfPermission(
                 requireContext(),
                 Manifest.permission.ACCESS_FINE_LOCATION
@@ -518,6 +527,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private void initClusterManager() {
         if (mMap == null || getContext() == null) return;
 
+        // ClusterManager groups nearby markers into clusters on map.
         clusterManager = new ClusterManager<>(requireContext(), mMap);
         clusterManager.setRenderer(
                 new AttractionClusterRenderer(requireContext(), mMap, clusterManager)
@@ -527,12 +537,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         mMap.setOnMarkerClickListener(clusterManager);
         mMap.setOnInfoWindowClickListener(clusterManager);
 
+        // Clicking on a cluster opens a dialog listing the places.
         clusterManager.setOnClusterClickListener(cluster -> {
             showClusterNamesDialog(cluster);
             return true;
         });
     }
 
+    // Sets up filter spinner with type options and updates filters accordingly.
     private void setupFilterSpinner() {
         String[] filterOptions = new String[]{
                 "All types",
@@ -580,6 +592,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         break;
                 }
 
+                // If we already have a location for last fetch, hit Places again.
+                // Otherwise just re-apply local filters on current list.
                 if (lastFetchLat != 0 || lastFetchLon != 0) {
                     requestNearbyForCurrentFilter(lastFetchLat, lastFetchLon);
                 } else {
@@ -594,6 +608,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         });
     }
 
+    // Sets up sort spinner to switch between distance, rating and combined "best".
     private void setupSortSpinner() {
         String[] sortOptions = new String[]{
                 "Distance",
@@ -640,6 +655,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         spinnerSort.setSelection(0);
     }
 
+    // Enables the "my location" layer if permission is granted, otherwise requests it.
     private void enableMyLocation() {
         if (mMap == null) return;
 
@@ -655,6 +671,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
+    // Reads last known location and triggers initial nearby search for that position.
     private void getUserLocation() {
         fusedLocationClient.getLastLocation()
                 .addOnSuccessListener(location -> {
@@ -693,6 +710,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     // ----------------- Load nearby & cache to Firestore -----------------
 
+    // Calls Places Search Nearby API, builds Attraction objects and caches them to Firestore.
     private void loadNearbyAttractions(
             double lat,
             double lon,
@@ -871,6 +889,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
+    // Loads attractions from Firestore local cache (offline mode).
     private void loadOfflineAttractions() {
         Source source = Source.CACHE;
 
@@ -909,6 +928,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 });
     }
 
+    // Based on current filter state, picks which place types to request and chooses online/offline source.
     private void requestNearbyForCurrentFilter(double lat, double lon) {
         List<String> types;
 
@@ -933,6 +953,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     // ----------------- Cluster dialog -----------------
 
+    // Builds and shows a dialog listing all places inside a clicked marker cluster.
     private void showClusterNamesDialog(Cluster<AttractionClusterItem> cluster) {
         if (getContext() == null) return;
 
@@ -983,6 +1004,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     // ----------------- Filtering / sorting / map update -----------------
 
+    // Applies type filters + sorting, then updates RecyclerView + map clusters.
     private void applyFiltersAndSorting() {
         if (getActivity() == null || mMap == null) return;
 
@@ -1028,6 +1050,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             });
         }
 
+        // Update list and cluster markers on main thread.
         getActivity().runOnUiThread(() -> {
             nearbyAdapter.updateItems(filtered);
 
@@ -1085,6 +1108,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         super.onResume();
         if (mapView != null) mapView.onResume();
 
+        // Resume location updates when fragment becomes visible (if permission granted).
         if (ContextCompat.checkSelfPermission(
                 requireContext(),
                 Manifest.permission.ACCESS_FINE_LOCATION
@@ -1102,6 +1126,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public void onPause() {
         super.onPause();
         if (mapView != null) mapView.onPause();
+        // Stop location updates to avoid leaks and unnecessary work.
         fusedLocationClient.removeLocationUpdates(locationCallback);
     }
 
