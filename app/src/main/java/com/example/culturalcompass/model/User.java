@@ -38,6 +38,5 @@ public class User {
     public Date getBirthdate() { return birthdate; }
     public void setBirthdate(Date birthdate) { this.birthdate = birthdate; }
 
-    //public String getPasswordHash() { return passwordHash; }
-    //public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
+
 }
