@@ -2,7 +2,6 @@ package com.example.culturalcompass.ui.login;
 
 import android.os.Bundle;
 import android.text.TextUtils;
-
 import android.util.Patterns;
 import android.view.*;
 import android.widget.*;
@@ -14,7 +13,6 @@ import androidx.fragment.app.Fragment;
 import com.example.culturalcompass.MainActivity;
 import com.example.culturalcompass.R;
 import com.example.culturalcompass.model.Session;
-import com.example.culturalcompass.model.User;
 import com.example.culturalcompass.ui.register.RegisterFragment;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -25,8 +23,8 @@ public class LoginFragment extends Fragment {
     private EditText etEmail, etPassword;
     private TextView tvError, tvForgotPassword;
 
-    private FirebaseAuth auth;            // Firebase Authentication
-    private FirebaseFirestore db;         // Firestore (user profiles)
+    private FirebaseAuth auth;        // firebase login system
+    private FirebaseFirestore db;     // user profiles
 
     @Nullable
     @Override
@@ -41,14 +39,14 @@ public class LoginFragment extends Fragment {
                               @Nullable Bundle savedInstanceState) {
         super.onViewCreated(v, savedInstanceState);
 
-        // Initialize Firebase
+        // Firebase init
         db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
 
-        // Hide header + bottom nav on login screen
+        // hide the action bar + bottom nav on login screen
         ((MainActivity) requireActivity()).hideChrome();
 
-        // Get UI references
+        // grab UI elements
         etEmail = v.findViewById(R.id.etEmailLogin);
         etPassword = v.findViewById(R.id.etPasswordLogin);
         tvError = v.findViewById(R.id.tvLoginError);
@@ -57,10 +55,10 @@ public class LoginFragment extends Fragment {
         Button btnLogin = v.findViewById(R.id.btnLogin);
         TextView tvGoRegister = v.findViewById(R.id.tvGoRegister);
 
-        // Login button
+        // login button clicked
         btnLogin.setOnClickListener(view -> login());
 
-        // Go to register
+        // go to register screen
         tvGoRegister.setOnClickListener(view ->
                 requireActivity().getSupportFragmentManager().beginTransaction()
                         .replace(R.id.flFragment, new RegisterFragment())
@@ -68,37 +66,33 @@ public class LoginFragment extends Fragment {
                         .commit()
         );
 
-        // Forgot password with FirebaseAuth
+        // forgot password email
         tvForgotPassword.setOnClickListener(view -> resetPassword());
     }
 
-    // Auto-login if already authenticated
     @Override
     public void onStart() {
         super.onStart();
 
+        // if already logged in → skip login page
         FirebaseUser firebaseUser = auth.getCurrentUser();
         if (firebaseUser != null) {
             String email = firebaseUser.getEmail();
             if (email != null) {
-                // Load profile and go home
-                loadUserProfileAndGoHome(email);
+                loadUserProfileAndGoHome(email); // load name and go home
             } else {
                 ((MainActivity) requireActivity()).navigateToHome();
             }
         }
     }
 
-    /**
-     * LOGIN with FirebaseAuth
-     */
     private void login() {
         tvError.setVisibility(View.GONE);
 
         String email = etEmail.getText().toString().trim();
         String pwd = etPassword.getText().toString();
 
-        // Validation
+        // basic checks
         if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             showError("Invalid email.");
             return;
@@ -109,58 +103,47 @@ public class LoginFragment extends Fragment {
             return;
         }
 
-        // FirebaseAuth login
+        // firebase login
         auth.signInWithEmailAndPassword(email, pwd)
                 .addOnSuccessListener(result -> {
-                    // After successful Firebase login → load profile from Firestore
+                    // after successful login → get user info from Firestore
                     loadUserProfileAndGoHome(email);
                 })
-                .addOnFailureListener(e -> {
-                    showError("Wrong email or password.");
-                });
+                .addOnFailureListener(e -> showError("Wrong email or password."));
     }
 
-    /**
-     * Loads user profile document from Firestore:
-     * /users/{email}
-     *
-     * Puts it into Session.currentUser
-     * Updates greeting text
-     * Navigates to home
-     */
     private void loadUserProfileAndGoHome(String email) {
+        // fetch user document to get their name
         db.collection("users").document(email)
                 .get()
                 .addOnSuccessListener(doc -> {
                     if (doc.exists()) {
-                        // get the name from Firestore
+                        // pull the user's name
                         String name = doc.getString("name");
 
                         if (name != null && !name.isEmpty()) {
                             Session.currentUsername = name;
                         } else {
-                            // fallback to email prefix if name missing
-                            String emailPrefix = email.substring(0, email.indexOf("@"));
-                            Session.currentUsername = emailPrefix;
+                            // fallback: use "email-before-@"
+                            String prefix = email.substring(0, email.indexOf("@"));
+                            Session.currentUsername = prefix;
                         }
 
+                        // update the "Hello, X" greeting
                         ((MainActivity) requireActivity()).updateGreeting();
                     }
 
-
-                    // Go to home screen
+                    // go to home page either way
                     ((MainActivity) requireActivity()).navigateToHome();
                 })
                 .addOnFailureListener(e -> {
-                    // If Firestore fails but Auth succeeded → still go home
+                    // even if Firestore fails → still go home if auth was ok
                     ((MainActivity) requireActivity()).navigateToHome();
                 });
     }
 
-    /**
-     * Sends "reset password" email via FirebaseAuth
-     */
     private void resetPassword() {
+        // send a reset email if the address is valid
         String email = etEmail.getText().toString().trim();
 
         if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
@@ -179,10 +162,8 @@ public class LoginFragment extends Fragment {
                 );
     }
 
-    /**
-     * Shows an error message under login form
-     */
     private void showError(String msg) {
+        // show error below input fields
         tvError.setText(msg);
         tvError.setVisibility(View.VISIBLE);
     }

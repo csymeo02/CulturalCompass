@@ -33,7 +33,7 @@ public class RegisterFragment extends Fragment {
     private Button btnRegister;
     private TextView tvGoLogin;
 
-    private FirebaseAuth auth;                               // ← ADDED
+    private FirebaseAuth auth;
     private FirebaseFirestore db;
 
     private DatePickerDialog datePickerDialog;
@@ -43,7 +43,7 @@ public class RegisterFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        auth = FirebaseAuth.getInstance();                   // ← ADDED (Firebase Authentication)
+        auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
         dateFormat = new SimpleDateFormat("dd-MM-yyyy");
     }
@@ -63,11 +63,10 @@ public class RegisterFragment extends Fragment {
         btnRegister = view.findViewById(R.id.btnRegister);
         tvGoLogin = view.findViewById(R.id.tvGoLogin);
 
-        // ---------- DATE PICKER ----------
         initDatePicker();
         etBirthday.setOnClickListener(v -> datePickerDialog.show());
 
-        // ---------- GO TO LOGIN ----------
+        // go to login
         tvGoLogin.setOnClickListener(v -> {
             ((MainActivity) requireActivity()).getSupportFragmentManager()
                     .beginTransaction()
@@ -75,7 +74,7 @@ public class RegisterFragment extends Fragment {
                     .commit();
         });
 
-        // ---------- REGISTER ----------
+        // register
         btnRegister.setOnClickListener(v -> attemptRegister());
 
         return view;
@@ -107,7 +106,7 @@ public class RegisterFragment extends Fragment {
         String confirmPass = etConfirmPassword.getText().toString();
         String birthdayStr = etBirthday.getText().toString().trim();
 
-        // ---------- VALIDATION ----------
+        // validation
         if (TextUtils.isEmpty(name) || TextUtils.isEmpty(surname) ||
                 TextUtils.isEmpty(email) || TextUtils.isEmpty(pass) ||
                 TextUtils.isEmpty(confirmPass) || TextUtils.isEmpty(birthdayStr)) {
@@ -153,13 +152,11 @@ public class RegisterFragment extends Fragment {
             return;
         }
 
-        // --------------------------------------------------------------------
-        // CHANGE HERE — Use FirebaseAuth for REAL signup
-        // --------------------------------------------------------------------
+        // use firebase auth
         auth.createUserWithEmailAndPassword(email, pass)        // ← ADDED
                 .addOnSuccessListener(result -> {
 
-                    // SAVE USER PROFILE TO FIRESTORE
+                    // save user profile to firestore
                     User user = new User(email, name, surname, birthdate);   // ← UPDATED (no password)
 
                     db.collection("users")
@@ -180,7 +177,7 @@ public class RegisterFragment extends Fragment {
 
                 })
                 .addOnFailureListener(e -> {
-                    // Handle Firebase errors properly
+                    // handle Firebase errors properly
                     Toast.makeText(getContext(), "Registration failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
     }

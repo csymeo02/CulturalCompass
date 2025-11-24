@@ -3,7 +3,6 @@ package com.example.culturalcompass.ui.profile;
 import android.app.DatePickerDialog;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.util.Patterns;
 import android.view.*;
 import android.widget.*;
 import androidx.annotation.NonNull;

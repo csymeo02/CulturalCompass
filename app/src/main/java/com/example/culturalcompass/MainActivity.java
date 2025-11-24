@@ -9,7 +9,6 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
@@ -17,13 +16,9 @@ import androidx.fragment.app.Fragment;
 import com.example.culturalcompass.model.Session;
 import com.example.culturalcompass.ui.assistant.AIAssistantFragment;
 import com.example.culturalcompass.ui.favorites.FavoritesFragment;
-import com.example.culturalcompass.ui.login.LoginFragment;
 import com.example.culturalcompass.ui.map.MapFragment;
-import com.example.culturalcompass.ui.register.RegisterFragment;
 import com.example.culturalcompass.ui.settings.SettingsFragment;
 import com.example.culturalcompass.ui.splash.SplashFragment;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -33,11 +28,11 @@ import com.google.firebase.messaging.FirebaseMessaging;
 
 public class MainActivity extends AppCompatActivity {
 
-    private boolean forceHide = true;
+    private boolean forceHide = true; // hide UI during splash/login
     private final Handler handler = new Handler(Looper.getMainLooper());
 
-    private int currentTabId = R.id.nav_map;  // Disable reloading same tab
-    public static PlacesClient placesClient;
+    private int currentTabId = R.id.nav_map;  // avoid reloading same tab
+    public static PlacesClient placesClient;  // shared Places client
 
     private TextView textGreeting;
     private FirebaseFirestore db;
@@ -47,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // ---------------------- PLACES API INIT ----------------------
+        // init Google Places once
         if (!Places.isInitialized()) {
             Places.initializeWithNewPlacesApiEnabled(
                     getApplicationContext(),
@@ -55,18 +50,17 @@ public class MainActivity extends AppCompatActivity {
             );
         }
         placesClient = Places.createClient(getApplicationContext());
-        // --------------------------------------------------------------
 
         db = FirebaseFirestore.getInstance();
 
-        // Header binding
+        // header + greeting text
         View headerView = findViewById(R.id.header);
         textGreeting = headerView.findViewById(R.id.textGreeting);
 
-        // Load greeting text
+        // load user's greeting if logged in
         updateGreetingFromAuth();
 
-        // SETTINGS BUTTON HANDLER
+        // settings icon on header
         ImageView settingsButton = findViewById(R.id.iconSettings);
         if (settingsButton != null) {
             settingsButton.setOnClickListener(v ->
@@ -79,18 +73,17 @@ public class MainActivity extends AppCompatActivity {
 
         BottomNavigationView bottomNavigationView = findViewById(R.id.bottomNavigationView);
 
-        // Start at Splash
+        // show splash on app start
         if (savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction()
                     .replace(R.id.flFragment, new SplashFragment())
                     .commit();
         }
 
-        // Bottom navigation
+        // bottom bar navigation
         bottomNavigationView.setOnItemSelectedListener(item -> {
 
-            // prevent reloading same tab
-            if (item.getItemId() == currentTabId) return false;
+            if (item.getItemId() == currentTabId) return false; // ignore same tab
             currentTabId = item.getItemId();
 
             Fragment selectedFragment = null;
@@ -111,32 +104,20 @@ public class MainActivity extends AppCompatActivity {
             return true;
         });
 
-        // Retrieve the FCM registration token
+        // request FCM push token (just logs it)
         FirebaseMessaging.getInstance().getToken()
-                .addOnCompleteListener(new OnCompleteListener<String>() {
-                    @Override
-                    public void onComplete(Task<String> task) {
-                        if (!task.isSuccessful()) {
-                            Log.w(TAG, "Fetching FCM registration token failed", task.getException());
-                            return;
-                        }
-
-                        // Get the FCM registration token
-                        String token = task.getResult();
-
-                        // TODO: do smth when opening the push notification
-                        // for now we just toast the firebase cloud messaging registration code
-                        String msg = "FCM Registration token: " + token;
-                        Log.d(TAG, msg);
-                     // Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+                .addOnCompleteListener(task -> {
+                    if (!task.isSuccessful()) {
+                        Log.w(TAG, "Fetching FCM registration token failed", task.getException());
+                        return;
                     }
+
+                    String token = task.getResult();
+                    Log.d(TAG, "FCM Registration token: " + token);
                 });
     }
 
-    // ------------------------------------------------------------------------
-    // LOAD GREETING USING FIREBASE AUTH EMAIL + FIRESTORE PROFILE
-    // ------------------------------------------------------------------------
-
+    // load greeting text from Firestore profile
     private void updateGreetingFromAuth() {
         String email = FirebaseAuth.getInstance().getCurrentUser() != null ?
                 FirebaseAuth.getInstance().getCurrentUser().getEmail() : null;
@@ -152,32 +133,33 @@ public class MainActivity extends AppCompatActivity {
                 .addOnSuccessListener(doc -> {
                     if (doc.exists()) {
                         String name = doc.getString("name");
+
                         if (name == null || name.isEmpty()) {
                             textGreeting.setText("Hello");
                         } else {
                             textGreeting.setText("Hello, " + name);
                         }
+
+                        // store globally for AI assistant
                         Session.currentUsername = name;
                     }
                 })
                 .addOnFailureListener(e -> textGreeting.setText("Hello"));
     }
 
-    // Called after login finished → refresh greeting
+    // called after login to refresh header
     public void updateGreeting() {
         updateGreetingFromAuth();
     }
 
-    // ------------------------------------------------------------------------
-    // UI Visibility Control — used by Splash/Login
-    // ------------------------------------------------------------------------
-
+    // hide header + bottom nav (used in login/splash)
     public void hideChrome() {
         forceHide = true;
         findViewById(R.id.header).setVisibility(View.GONE);
         findViewById(R.id.bottomNavigationView).setVisibility(View.GONE);
     }
 
+    // show header + bottom nav again
     public void showChrome() {
         if (!forceHide) {
             findViewById(R.id.header).setVisibility(View.VISIBLE);
@@ -185,21 +167,19 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // leave splash screen with a small delay
     public void exitSplash() {
         forceHide = false;
         handler.postDelayed(this::showChrome, 200);
     }
 
-    // ------------------------------------------------------------------------
-
-
-
+    // navigate to map screen (home)
     public void navigateToHome() {
         exitSplash();
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.flFragment, new MapFragment())
                 .commit();
 
-        updateGreeting(); // refresh text
+        updateGreeting(); // refresh greeting text
     }
 }

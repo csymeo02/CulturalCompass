@@ -11,7 +11,6 @@ import androidx.fragment.app.Fragment;
 
 import com.example.culturalcompass.R;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.SimpleDateFormat;

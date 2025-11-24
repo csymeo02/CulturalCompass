@@ -13,7 +13,8 @@ public class FirestoreAttraction {
     private Integer ratingCount;
 
     // Needed for Firestore deserialization
-    public FirestoreAttraction() { }
+    public FirestoreAttraction() {
+    }
 
     public FirestoreAttraction(String id,
                                String name,
@@ -35,13 +36,39 @@ public class FirestoreAttraction {
         this.ratingCount = ratingCount;
     }
 
-    public String getId() { return id; }
-    public String getName() { return name; }
-    public double getLat() { return lat; }
-    public double getLng() { return lng; }
-    public double getDistanceMeters() { return distanceMeters; }
-    public String getTypeLabel() { return typeLabel; }
-    public String getPrimaryTypeKey() { return primaryTypeKey; }
-    public Double getRating() { return rating; }
-    public Integer getRatingCount() { return ratingCount; }
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public double getLat() {
+        return lat;
+    }
+
+    public double getLng() {
+        return lng;
+    }
+
+    public double getDistanceMeters() {
+        return distanceMeters;
+    }
+
+    public String getTypeLabel() {
+        return typeLabel;
+    }
+
+    public String getPrimaryTypeKey() {
+        return primaryTypeKey;
+    }
+
+    public Double getRating() {
+        return rating;
+    }
+
+    public Integer getRatingCount() {
+        return ratingCount;
+    }
 }
