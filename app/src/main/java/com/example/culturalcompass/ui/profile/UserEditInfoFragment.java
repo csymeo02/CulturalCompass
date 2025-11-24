@@ -60,6 +60,7 @@ public class UserEditInfoFragment extends Fragment {
         // DATE PICKER
         Calendar cal = Calendar.getInstance();
         datePicker = new DatePickerDialog(requireContext(),
+                R.style.CustomDatePicker,
                 (view, y, m, d) -> {
                     Calendar c = Calendar.getInstance();
                     c.set(y, m, d);

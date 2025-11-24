@@ -128,7 +128,7 @@ public class MainActivity extends AppCompatActivity {
                         // for now we just toast the firebase cloud messaging registration code
                         String msg = "FCM Registration token: " + token;
                         Log.d(TAG, msg);
-                        Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+                     // Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
                     }
                 });
     }
