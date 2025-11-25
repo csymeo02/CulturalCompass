@@ -76,9 +76,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Cancel"
-            android:backgroundTint="@color/primary"
-            android:textColor="@android:color/black"
-            android:padding="12dp"/>
+            android:backgroundTint="#DDDDDD"
+            android:textColor="#222222"
+            android:padding="12dp"
+            android:stateListAnimator="@null"
+            android:layout_marginBottom="8dp" />
 
     </LinearLayout>
 </ScrollView>
