@@ -59,6 +59,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     static class UserHolder extends RecyclerView.ViewHolder {
         TextView text;
+
         UserHolder(View itemView) {
             super(itemView);
             text = itemView.findViewById(R.id.text_user);
@@ -67,6 +68,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     static class AssistantHolder extends RecyclerView.ViewHolder {
         TextView text;
+
         AssistantHolder(View itemView) {
             super(itemView);
             text = itemView.findViewById(R.id.text_assistant);
