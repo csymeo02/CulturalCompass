@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Custom DatePicker theme for OK/Cancel & accent -->
-    <style name="CustomDatePicker" parent="Theme.MaterialComponents.Light.Dialog">
+    <style name="CustomDatePicker" parent="ThemeOverlay.AppCompat.Dialog">
         <item name="colorAccent">@color/primary</item>
         <item name="android:colorAccent">@color/primary</item>
+
+        <!-- OK / Cancel buttons -->
+        <item name="android:buttonBarPositiveButtonStyle">@style/DatePickerDialogButton</item>
+        <item name="android:buttonBarNegativeButtonStyle">@style/DatePickerDialogButton</item>
     </style>
+
+    <style name="DatePickerDialogButton" parent="@android:style/Widget.Material.Button.Borderless">
+        <item name="android:textColor">@color/primary</item>
+    </style>
+
 </resources>
