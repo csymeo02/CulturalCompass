@@ -425,9 +425,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 .commit();
     }
 
-    // ----------------- Firestore helpers -----------------
 
-    // Reference to /users/{email}/attractions collection for caching nearby places.
     private CollectionReference userAttractionsRef() {
         return db.collection("users")
                 .document(userEmail)
@@ -442,7 +440,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         return netInfo != null && netInfo.isConnected();
     }
 
-    // ----------------- Places search / map interactions -----------------
 
     // Launches Places Autocomplete overlay for the search bar.
     private void openSearchAutocomplete() {
@@ -951,7 +948,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
-    // ----------------- Cluster dialog -----------------
 
     // Builds and shows a dialog listing all places inside a clicked marker cluster.
     private void showClusterNamesDialog(Cluster<AttractionClusterItem> cluster) {
@@ -1002,7 +998,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 .show();
     }
 
-    // ----------------- Filtering / sorting / map update -----------------
 
     // Applies type filters + sorting, then updates RecyclerView + map clusters.
     private void applyFiltersAndSorting() {
@@ -1101,7 +1096,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         return weightedRating - penalty;
     }
 
-    // ----------------- Fragment lifecycle -----------------
 
     @Override
     public void onResume() {
